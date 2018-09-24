@@ -1,0 +1,30 @@
+<manifest package="com.e16din.screensadapter"
+          xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+
+        <activity
+            android:name="com.e16din.screensadapter.activities.StarterActivity"
+            android:theme="@style/AppTheme">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+        </activity>
+
+        <activity
+            android:name="com.e16din.screensadapter.activities.DefaultActivity"/>
+
+        <activity
+            android:name="com.e16din.screensadapter.activities.LandscapeActivity"
+            android:screenOrientation="landscape"/>
+
+        <activity
+            android:name="com.e16din.screensadapter.activities.PortraitActivity"
+            android:screenOrientation="portrait"/>
+
+    </application>
+
+</manifest>

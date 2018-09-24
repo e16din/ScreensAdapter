@@ -1,0 +1,5 @@
+//include ':sample'
+include ':screensmodel'
+include ':screensadapter-annotation'
+include ':screensadapter-compiler'
+include ':screensadapter'
