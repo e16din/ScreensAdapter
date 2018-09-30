@@ -6,7 +6,6 @@ import com.e16din.screensadapter.annotation.model.App
 import com.e16din.screensadapter.annotation.model.Screen
 import com.e16din.screensadapter.annotation.model.Server
 import com.e16din.screensadapter.processor.ScreensAdapterProcessor.Companion.KAPT_KOTLIN_GENERATED_OPTION_NAME
-import com.google.auto.service.AutoService
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.plusParameter
 import java.io.File
@@ -18,7 +17,7 @@ import javax.lang.model.type.MirroredTypeException
 import javax.tools.Diagnostic
 
 
-@AutoService(Processor::class)
+//@AutoService(Processor::class)
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
 @SupportedAnnotationTypes("*")
 @SupportedOptions(KAPT_KOTLIN_GENERATED_OPTION_NAME)
@@ -300,7 +299,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         val serverParamName = "server"
         val delayForSplashMsParamName = "delayForSplashMs"
 
-        return this.superclass(superClassName)
+        return this.superclass(superClassName).addModifiers(KModifier.PUBLIC)
                 .primaryConstructor(FunSpec.constructorBuilder()
                         .addParameter(androidAppParamName, CLS_APPLICATION)
                         .addParameter(appParamName, ClassName.bestGuess(appClassName!!))

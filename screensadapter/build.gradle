@@ -3,6 +3,30 @@ apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
 
+ext {
+    bintrayRepo = 'maven'
+    bintrayName = 'screensadapter'
+
+    publishedGroupId = 'com.github.e16din'
+    libraryName = libraryName
+    artifact = bintrayName
+
+    libraryDescription = 'ScreensAdapter'
+
+    siteUrl = siteUrl
+    gitUrl = gitUrl
+
+    libraryVersion = version_name
+
+    developerId = 'e16din'
+    developerName = 'Aleksandr Kundryukov'
+    developerEmail = 'a.kundryukov@gmail.com'
+
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    allLicenses = ["Apache-2.0"]
+}
+
 android {
     compileSdkVersion 28
 
@@ -36,10 +60,9 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:0.25.3"
 
-    implementation 'com.github.e16din:DataManager:0.5.5'
-    implementation 'com.github.e16din:ScreensModel:0.8.1'
+    implementation 'com.github.e16din:datamanager:0.5.6'
 
-    compileOnly project(path: ':screensadapter-annotation')
+    implementation project(path: ':screensmodel')
 }
 
 androidExtensions {
@@ -51,3 +74,6 @@ kotlin {
         coroutines "enable"
     }
 }
+
+apply from: '../installv1.gradle'
+apply from: '../bintrayv1.gradle'

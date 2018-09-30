@@ -1,17 +1,44 @@
 apply plugin: 'java-library'
 apply plugin: "kotlin"
 
+ext {
+    bintrayRepo = 'maven'
+    bintrayName = 'screensmodel'
+
+    publishedGroupId = 'com.github.e16din'
+    libraryName = libraryName
+    artifact = bintrayName
+
+    libraryDescription = 'App Model'
+
+    siteUrl = siteUrl
+    gitUrl = gitUrl
+
+    libraryVersion = version_name
+
+    developerId = 'e16din'
+    developerName = 'Aleksandr Kundryukov'
+    developerEmail = 'a.kundryukov@gmail.com'
+
+    licenseName = 'The Apache Software License, Version 2.0'
+    licenseUrl = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+    allLicenses = ["Apache-2.0"]
+}
+
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.25.3"
 }
 
-sourceCompatibility = "1.7"
-targetCompatibility = "1.7"
+sourceCompatibility = "1.8"
+targetCompatibility = "1.8"
 
 kotlin {
     experimental {
         coroutines "enable"
     }
 }
+
+apply from: '../installv1.gradle'
+apply from: '../bintrayv1.gradle'
