@@ -9,7 +9,7 @@ import com.e16din.screensadapter.settings.ScreenSettings
 abstract class BaseActivity : AppCompatActivity() {
 
     companion object {
-        const val KEY_SCREEN_SETTINGS = "ScreenSettings"
+        const val KEY_SCREEN_SETTINGS = "com.e16din.screensadapter.ScreenSettings"
     }
 
     private lateinit var settings: ScreenSettings

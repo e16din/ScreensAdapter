@@ -304,7 +304,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                         .addParameter(androidAppParamName, CLS_APPLICATION)
                         .addParameter(appParamName, ClassName.bestGuess(appClassName!!))
                         .addParameter(serverParamName, ClassName.bestGuess(serverClassName!!))
-                        .addParameter(delayForSplashMsParamName, Int::class)
+                        .addParameter(delayForSplashMsParamName, Long::class)
                         .build())
                 .addSuperclassConstructorParameter(androidAppParamName)
                 .addSuperclassConstructorParameter(appParamName)

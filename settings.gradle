@@ -1,4 +1,4 @@
-include ':sample'
+//include ':sample'
 include ':screensadapter-annotation'
 include ':screensadapter-compiler'
 include ':screensadapter'

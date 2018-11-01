@@ -6,14 +6,17 @@ import android.view.View
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensmodel.ScreenModel
-import kotlinx.coroutines.experimental.CommonPool
-import kotlinx.coroutines.experimental.android.UI
-import kotlinx.coroutines.experimental.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.launch
 
 // Note! Hide supportScreens only through supportScreens adapter.hideCurrentScreen()
-abstract class BaseScreenBinder(open val adapter: ScreensAdapter<*, *>) :
+abstract class BaseScreenBinder(val adapter: ScreensAdapter<*, *>) :
+        CoroutineScope,
         ScreenModel.System,
         ScreenModel.User {
+
+    protected val data = adapter.getCurrentData()
 
     protected lateinit var screensForBinder: Collection<Any>
 
@@ -39,13 +42,13 @@ abstract class BaseScreenBinder(open val adapter: ScreensAdapter<*, *>) :
     }
 
     override fun runOnBackgroundThread(runnable: suspend () -> Unit) {
-        launch(CommonPool) {
+        launch {
             runnable()
         }
     }
 
     override fun runOnUiThread(runnable: suspend () -> Unit) {
-        launch(UI) {
+        launch(Main) {
             runnable()
         }
     }

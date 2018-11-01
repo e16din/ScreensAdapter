@@ -15,7 +15,6 @@ ext {
     gitUrl = gitUrl
 
     libraryVersion = version_name
-
     developerId = 'e16din'
     developerName = 'Aleksandr Kundryukov'
     developerEmail = 'a.kundryukov@gmail.com'
@@ -28,7 +27,7 @@ ext {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:0.25.3"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 }
 
 sourceCompatibility = "1.8"

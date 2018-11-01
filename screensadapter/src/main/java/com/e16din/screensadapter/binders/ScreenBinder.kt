@@ -2,7 +2,7 @@ package com.e16din.screensadapter.binders
 
 import com.e16din.screensadapter.ScreensAdapter
 
-open class ScreenBinder<SCREEN>(adapter: ScreensAdapter<*, *>) :
+abstract class ScreenBinder<SCREEN>(adapter: ScreensAdapter<*, *>) :
         BaseScreenBinder(adapter) {
 
     val screen: SCREEN

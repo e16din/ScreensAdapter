@@ -1,12 +1,14 @@
 package com.e16din.screensadapter.settings
 
 import android.content.pm.ActivityInfo
+import android.os.Bundle
 import com.e16din.screensadapter.R
 import java.io.Serializable
 
 //todo: use Parcelize
 open class ScreenSettings(val screenCls: Class<*>,
                           val layoutId: Int? = null,
+                          val data: Bundle? = null,
                           val orientation: Int = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
                           val themeId: Int = R.style.Theme_AppCompat,
                           val finishOnNextScreen: Boolean = false,

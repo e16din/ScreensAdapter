@@ -7,8 +7,8 @@ import android.content.pm.ActivityInfo
 import android.support.v4.app.ActivityCompat
 import android.util.Log
 import com.e16din.datamanager.DataManager
-import com.e16din.datamanager.get
-import com.e16din.datamanager.put
+import com.e16din.datamanager.getData
+import com.e16din.datamanager.putData
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.activities.DefaultActivity
 import com.e16din.screensadapter.activities.LandscapeActivity
@@ -17,9 +17,10 @@ import com.e16din.screensadapter.binders.BaseScreenBinder
 import com.e16din.screensadapter.settings.ScreenSettings
 import com.e16din.screensmodel.AppModel
 import com.e16din.screensmodel.ServerModel
-import kotlinx.coroutines.experimental.android.UI
-import kotlinx.coroutines.experimental.delay
-import kotlinx.coroutines.experimental.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.collections.ArrayList
@@ -29,7 +30,7 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
         androidApp: Application,
         appModel: APP,
         serverModel: SERVER,
-        private val delayForSplashMs: Int = 1500) {
+        private val delayForSplashMs: Long = 1500) : CoroutineScope {
 
     companion object {
         private const val TAG = "adapter.debug"
@@ -128,7 +129,7 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
         Log.i(TAG, "show starter!")
         launch {
             delay(delayForSplashMs)
-            launch(UI) {
+            launch(Main) {
                 showNextScreen(firstScreenSettings, activity)
                 ActivityCompat.finishAfterTransition(activity)
             }
@@ -214,6 +215,7 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
 
     fun getApp() = appModelRef.get()!!
     fun getServer() = serverModelRef.get()!!
+    fun getCurrentData() = screenSettingsStack.peek().data
 
     fun setFirstScreen(settings: ScreenSettings) {
         firstScreenSettings = settings
@@ -275,10 +277,10 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
     }
 
     fun start() {
-        val launchNumber = DATA.LAUNCH_NUMBER.get() ?: 0
+        val launchNumber = DATA.LAUNCH_NUMBER.getData() ?: 0
         getApp().onStart(launchNumber)
 
-        DATA.LAUNCH_NUMBER.put(launchNumber + 1)
+        DATA.LAUNCH_NUMBER.putData(launchNumber + 1)
     }
 
     fun resetToFirstScreen() {
