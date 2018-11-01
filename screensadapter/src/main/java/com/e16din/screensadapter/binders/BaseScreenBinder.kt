@@ -8,7 +8,9 @@ import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensmodel.ScreenModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlin.coroutines.CoroutineContext
 
 // Note! Hide supportScreens only through supportScreens adapter.hideCurrentScreen()
 abstract class BaseScreenBinder(val adapter: ScreensAdapter<*, *>) :
@@ -16,7 +18,12 @@ abstract class BaseScreenBinder(val adapter: ScreensAdapter<*, *>) :
         ScreenModel.System,
         ScreenModel.User {
 
-    protected val data = adapter.getCurrentData()
+    override val coroutineContext: CoroutineContext
+        get() = GlobalScope.coroutineContext
+
+    protected val data by lazy {
+        adapter.getCurrentData()
+    }
 
     protected lateinit var screensForBinder: Collection<Any>
 

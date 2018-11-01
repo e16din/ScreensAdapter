@@ -17,8 +17,8 @@ import com.e16din.screensadapter.binders.BaseScreenBinder
 import com.e16din.screensadapter.settings.ScreenSettings
 import com.e16din.screensmodel.AppModel
 import com.e16din.screensmodel.ServerModel
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
@@ -30,7 +30,7 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
         androidApp: Application,
         appModel: APP,
         serverModel: SERVER,
-        private val delayForSplashMs: Long = 1500) : CoroutineScope {
+        private val delayForSplashMs: Long = 1500) {
 
     companion object {
         private const val TAG = "adapter.debug"
@@ -127,7 +127,7 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
 
     fun onStarterActivityCreated(activity: Activity) {
         Log.i(TAG, "show starter!")
-        launch {
+        GlobalScope.launch {
             delay(delayForSplashMs)
             launch(Main) {
                 showNextScreen(firstScreenSettings, activity)
@@ -215,7 +215,9 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
 
     fun getApp() = appModelRef.get()!!
     fun getServer() = serverModelRef.get()!!
+
     fun getCurrentData() = screenSettingsStack.peek().data
+            ?: throw java.lang.IllegalStateException("getCurrentData().screenSettingsStack must not be empty!")
 
     fun setFirstScreen(settings: ScreenSettings) {
         firstScreenSettings = settings
@@ -250,8 +252,8 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
             bindersByScreenClsMap.clear()
         }
 
-        startActivity(settings, activity)
         pushScreen(settings)
+        startActivity(settings, activity)
     }
 
     private fun pushScreen(settings: ScreenSettings) {
