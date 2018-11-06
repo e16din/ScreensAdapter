@@ -2,10 +2,11 @@ package com.e16din.screensadapter.settings
 
 import android.content.pm.ActivityInfo
 import android.os.Bundle
+import android.os.Parcelable
 import com.e16din.screensadapter.R
-import java.io.Serializable
+import kotlinx.android.parcel.Parcelize
 
-//todo: use Parcelize
+@Parcelize
 open class ScreenSettings(val screenCls: Class<*>,
                           val layoutId: Int? = null,
                           val data: Bundle? = null,
@@ -13,4 +14,4 @@ open class ScreenSettings(val screenCls: Class<*>,
                           val themeId: Int = R.style.Theme_AppCompat,
                           val finishOnNextScreen: Boolean = false,
                           var finishAllPreviousScreens: Boolean = false,
-                          val activityCls: Class<*> = Any::class.java) : Serializable
+                          val activityCls: Class<*> = Any::class.java) : Parcelable

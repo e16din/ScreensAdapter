@@ -20,7 +20,7 @@ abstract class BaseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        settings = intent.getSerializableExtra(KEY_SCREEN_SETTINGS) as ScreenSettings
+        settings = intent.getParcelableExtra(KEY_SCREEN_SETTINGS) as ScreenSettings
 
         setTheme(settings.themeId)
 

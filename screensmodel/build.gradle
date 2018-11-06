@@ -30,14 +30,5 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 }
 
-sourceCompatibility = "1.8"
-targetCompatibility = "1.8"
-
-kotlin {
-    experimental {
-        coroutines "enable"
-    }
-}
-
 apply from: '../installv1.gradle'
 apply from: '../bintrayv1.gradle'

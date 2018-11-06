@@ -216,8 +216,7 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
     fun getApp() = appModelRef.get()!!
     fun getServer() = serverModelRef.get()!!
 
-    fun getCurrentData() = screenSettingsStack.peek().data
-            ?: throw java.lang.IllegalStateException("getCurrentData().screenSettingsStack must not be empty!")
+    fun getCurrentData() = screenSettingsStack.peek()?.data
 
     fun setFirstScreen(settings: ScreenSettings) {
         firstScreenSettings = settings
