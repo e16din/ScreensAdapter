@@ -1,6 +1,8 @@
 package com.e16din.screensadapter.binders
 
 import android.app.Activity
+import android.content.res.Resources
+import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.view.View
 import com.e16din.screensadapter.ScreensAdapter
@@ -35,8 +37,16 @@ abstract class BaseScreenBinder(val adapter: ScreensAdapter<*, *>) :
                 ?: throw NullPointerException("Activity must be not null!")
 
     protected val view: View
-        get() = adapter.getCurrentActivity()?.getContentView()
-                ?: throw NullPointerException("Activity must be not null!")
+        get() = activity.getContentView()
+
+    protected val resources: Resources
+        get() = activity.resources
+
+    fun getString(id: Int): String = resources.getString(id)
+    fun getString(id: Int, formatArgs: Array<Any> = emptyArray()): String {
+        return resources.getString(id, formatArgs)
+    }
+    fun getColor(id: Int) = ContextCompat.getColor(activity, id)
 
     open fun isEnabled() = true
 
