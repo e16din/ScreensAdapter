@@ -62,6 +62,8 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
 
     private var showScreenInProgress = false
 
+    private var onBackPressed: (() -> Unit)? = null
+
     private fun getCurrentBinders(): Collection<BaseScreenBinder> {
         if (screenSettingsStack.isEmpty()) {
             return emptyList()
@@ -188,6 +190,12 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
 
     fun onBackPressed() {
         Log.w(TAG, "screenSettingsStack: $screenSettingsStack")
+
+        if (onBackPressed != null) {
+            onBackPressed?.invoke()
+            return
+        }
+
         if (screenSettingsStack.isNotEmpty()) {
             backToPreviousScreenOrClose()
         }
@@ -223,6 +231,8 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
     }
 
     fun showNextScreen(settings: ScreenSettings, activity: Activity? = null) {
+        onBackPressed = null
+
         val screens = generateScreens(settings.screenCls)
         screensByMainScreenClsMap[settings.screenCls] = screens
 
@@ -288,5 +298,13 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
         val firstScreenSettings = screenSettingsStack.last()
         firstScreenSettings.finishAllPreviousScreens = true
         showNextScreen(firstScreenSettings)
+    }
+
+    fun setOnBackPressedListener(listener: (() -> Unit)?) {
+        onBackPressed = listener
+    }
+
+    fun resetOnBackPressedListener() {
+        setOnBackPressedListener(null)
     }
 }
