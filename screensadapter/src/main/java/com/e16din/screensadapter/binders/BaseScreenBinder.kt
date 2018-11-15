@@ -2,6 +2,7 @@ package com.e16din.screensadapter.binders
 
 import android.app.Activity
 import android.content.res.Resources
+import android.support.v4.app.Fragment
 import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.view.View
@@ -42,10 +43,13 @@ abstract class BaseScreenBinder(val adapter: ScreensAdapter<*, *>) :
     protected val resources: Resources
         get() = activity.resources
 
+    var onBackPressed: (() -> Unit)? = null
+
     fun getString(id: Int): String = resources.getString(id)
     fun getString(id: Int, formatArgs: Array<Any> = emptyArray()): String {
         return resources.getString(id, formatArgs)
     }
+
     fun getColor(id: Int) = ContextCompat.getColor(activity, id)
 
     open fun isEnabled() = true
@@ -72,6 +76,18 @@ abstract class BaseScreenBinder(val adapter: ScreensAdapter<*, *>) :
 
     override fun log(message: String) {
         Log.d("logs", message)
+    }
+
+    fun setOnBackPressedListener(listener: (() -> Unit)?) {
+        onBackPressed = listener
+    }
+
+    fun resetOnBackPressedListener() {
+        setOnBackPressedListener(null)
+    }
+
+    fun <T : Fragment?> findFragmentById(id: Int): T {
+        return activity.supportFragmentManager.findFragmentById(id) as T
     }
 
     open fun onBind() {}

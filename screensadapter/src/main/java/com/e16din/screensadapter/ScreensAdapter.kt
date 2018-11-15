@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.support.v4.app.ActivityCompat
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import com.e16din.datamanager.DataManager
 import com.e16din.datamanager.getData
 import com.e16din.datamanager.putData
@@ -62,7 +64,9 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
 
     private var showScreenInProgress = false
 
-    private var onBackPressed: (() -> Unit)? = null
+    var onBackPressed: (() -> Unit)? = null
+    var onOptionsItemSelected: ((item: MenuItem) -> Boolean)? = null
+    var onPrepareOptionsMenu: ((menu: Menu?) -> Boolean)? = null
 
     private fun getCurrentBinders(): Collection<BaseScreenBinder> {
         if (screenSettingsStack.isEmpty()) {
@@ -300,11 +304,11 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
         showNextScreen(firstScreenSettings)
     }
 
-    fun setOnBackPressedListener(listener: (() -> Unit)?) {
-        onBackPressed = listener
+    fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return onOptionsItemSelected?.invoke(item) ?: false
     }
 
-    fun resetOnBackPressedListener() {
-        setOnBackPressedListener(null)
+    fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        return onPrepareOptionsMenu?.invoke(menu) ?: false
     }
 }
