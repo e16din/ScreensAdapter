@@ -1,9 +1,9 @@
-package com.e16din.screensadapter.binders
+package com.e16din.screensadapter.binders.android
 
 import com.e16din.screensadapter.ScreensAdapter
 
 abstract class ScreenBinder<SCREEN>(adapter: ScreensAdapter<*, *>) :
-        BaseScreenBinder(adapter) {
+        BaseAndroidScreenBinder(adapter) {
 
     val screen: SCREEN
         get() = screensForBinder.first() as SCREEN

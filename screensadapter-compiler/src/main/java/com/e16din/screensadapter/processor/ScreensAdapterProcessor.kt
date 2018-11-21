@@ -4,7 +4,7 @@ import com.e16din.screensadapter.annotation.AddSupportBinder
 import com.e16din.screensadapter.annotation.BindScreen
 import com.e16din.screensadapter.annotation.model.App
 import com.e16din.screensadapter.annotation.model.Screen
-import com.e16din.screensadapter.annotation.model.Server
+import com.e16din.screensadapter.annotation.model.ServerAgent
 import com.e16din.screensadapter.processor.ScreensAdapterProcessor.Companion.KAPT_KOTLIN_GENERATED_OPTION_NAME
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.plusParameter
@@ -32,10 +32,10 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         private const val PADDING_2 = "    "
         private const val PADDING_3 = "          "
 
-        private val CLS_APPLICATION =
+        private val CLS_ANDROID_APPLICATION =
                 ClassName("android.app", "Application")
-        private val CLS_BASE_SCREEN_BINDER =
-                ClassName("com.e16din.screensadapter.binders", "BaseScreenBinder")
+        private val CLS_BASE_ANDROID_SCREEN_BINDER =
+                ClassName("com.e16din.screensadapter.binders.android", "BaseAndroidScreenBinder")
     }
 
     private lateinit var filer: Filer
@@ -48,6 +48,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
     private var screensByMainScreenMap = HashMap<String, List<String>>()
     private var screensByBinderMap = HashMap<String, List<String>>()
+    private var dataTypeByMainScreenMap = HashMap<String, String>()
 
     override fun getSupportedSourceVersion(): SourceVersion {
         return SourceVersion.latestSupported()
@@ -56,7 +57,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
     override fun getSupportedAnnotationTypes(): Set<String> {
         val annotations = HashSet<String>()
         annotations.add(App::class.java.canonicalName)
-        annotations.add(Server::class.java.canonicalName)
+        annotations.add(ServerAgent::class.java.canonicalName)
         annotations.add(Screen::class.java.canonicalName)
         annotations.add(BindScreen::class.java.canonicalName)
         annotations.add(AddSupportBinder::class.java.canonicalName)
@@ -80,6 +81,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
         processApp(roundEnv)
         processServer(roundEnv)
+        processScreens(roundEnv)
         processBinders(roundEnv)
         processSupportBinders(roundEnv)
 
@@ -95,7 +97,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
     }
 
     private fun processServer(roundEnv: RoundEnvironment) {
-        roundEnv.getElementsAnnotatedWith(Server::class.java)
+        roundEnv.getElementsAnnotatedWith(ServerAgent::class.java)
                 .firstOrNull()
                 ?.run {
                     serverClassName = this.getFullName()
@@ -110,6 +112,23 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                     appClassName = this.getFullName()
                     "appClassName: $appClassName".print()
                 }
+    }
+
+    private fun processScreens(roundEnv: RoundEnvironment) {
+        ">> processScreens:".print()
+        val binderElements =
+                roundEnv.getElementsAnnotatedWith(Screen::class.java)
+
+        binderElements.forEach { element ->
+            val dataTypeName = try {
+                element.getAnnotation(Screen::class.java).data.qualifiedName
+            } catch (e: MirroredTypeException) {
+                e.typeMirror.toString()
+            }
+
+            val screenName = element.getFullName()
+            dataTypeByMainScreenMap[screenName] = dataTypeName!!
+        }
     }
 
     private fun processBinders(roundEnv: RoundEnvironment) {
@@ -257,7 +276,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                                 bindersObjectsCode +
                                 "${PADDING_2}else -> throw createNotFoundException($screenClsParamName.simpleName)\n" +
                                 "$PADDING_1}")
-                .returns(ClassName.bestGuess("Collection").plusParameter(CLS_BASE_SCREEN_BINDER))
+                .returns(ClassName.bestGuess("Collection").plusParameter(CLS_BASE_ANDROID_SCREEN_BINDER))
                 .build()
 
         return this.addFunction(funcSpec)
@@ -265,13 +284,19 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
     private fun (TypeSpec.Builder).addGeneratedScreensFunc(): TypeSpec.Builder {
         val mainScreenClsParamName = "mainScreenCls"
+        val dataParamName = "data"
 
         var mainScreensObjectsCode = ""
         screensByMainScreenMap.keys.forEach { mainScreenName ->
+            val dataType = dataTypeByMainScreenMap[mainScreenName]
             mainScreensObjectsCode += "$PADDING_2$mainScreenName::class.java -> arrayListOf(\n" +
                     screensByMainScreenMap[mainScreenName]
                             ?.joinToString(separator = ",\n") { screenName ->
-                                "$PADDING_3$screenName()"
+                                val data = if (dataType.equals("java.lang.Object"))
+                                    dataParamName
+                                else
+                                    "$dataParamName as $dataType"
+                                "restoreScreen(\"$screenName\") ?: $PADDING_3$screenName($data)"
                             } +
                     "$PADDING_2)\n"
         }
@@ -279,6 +304,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         val funcSpec = FunSpec.builder("generateScreens")
                 .addModifiers(KModifier.OVERRIDE)
                 .addParameter(mainScreenClsParamName, ClassName.bestGuess("Class<*>"))
+                .addParameter(dataParamName, ClassName.bestGuess("Any?"))
                 .addStatement(
                         "${PADDING_1}return when ($mainScreenClsParamName) {\n" +
                                 mainScreensObjectsCode +
@@ -301,7 +327,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
         return this.superclass(superClassName).addModifiers(KModifier.PUBLIC)
                 .primaryConstructor(FunSpec.constructorBuilder()
-                        .addParameter(androidAppParamName, CLS_APPLICATION)
+                        .addParameter(androidAppParamName, CLS_ANDROID_APPLICATION)
                         .addParameter(appParamName, ClassName.bestGuess(appClassName!!))
                         .addParameter(serverParamName, ClassName.bestGuess(serverClassName!!))
                         .addParameter(delayForSplashMsParamName, Long::class)
@@ -329,3 +355,34 @@ private fun String.substringBetween(start: String, end: String): String? {
         null
     }
 }
+
+
+//class GeneratedScreensAdapter(
+//        androidApp: Application,
+//        app: PurchasesAppAgent,
+//        server: PurchasesServerAgent,
+//        delayForSplashMs: Long
+//) : ScreensAdapter<com.e16din.purchases.app.PurchasesAppAgent, com.e16din.purchases.server.PurchasesServerAgent>(androidApp, app, server, delayForSplashMs) {
+//    override fun generateScreens(mainScreenCls: Class<*>, data:Any?): Collection<Any> {
+//        return when (mainScreenCls) {
+//            com.e16din.purchases.screens.main.MainScreen::class.java -> arrayListOf(
+//                    "MainScreen".getData<MainScreen>() ?: com.e16din.purchases.screens.main.MainScreen(data)
+// )
+//            com.e16din.purchases.screens.order.OrderScreen::class.java -> arrayListOf(
+//                    com.e16din.purchases.screens.order.OrderScreen()    )
+//            else -> throw createNotFoundException(mainScreenCls.simpleName)
+//        }
+//    }
+//
+//    override fun generateBinders(screenCls: Class<*>): Collection<BaseScreenBinder> {
+//        return when (screenCls) {
+//            com.e16din.purchases.screens.main.MainScreen::class.java -> arrayListOf(
+//                    com.e16din.purchases.screens.main.MainBinder(this)
+//            )
+//            com.e16din.purchases.screens.order.OrderScreen::class.java -> arrayListOf(
+//                    com.e16din.purchases.screens.order.OrderBinder(this)
+//            )
+//            else -> throw createNotFoundException(screenCls.simpleName)
+//        }
+//    }
+//}

@@ -1,6 +1,6 @@
 package com.e16din.screensmodel
 
-interface AppModel {
+interface BaseApp {
 
     fun onStart(launchNumber: Int)
 

@@ -10,10 +10,6 @@ import com.e16din.screensadapter.settings.ScreenSettings
 
 abstract class BaseActivity : AppCompatActivity() {
 
-    companion object {
-        const val KEY_SCREEN_SETTINGS = "com.e16din.screensadapter.ScreenSettings"
-    }
-
     private lateinit var settings: ScreenSettings
 
     private val screensAdapter: ScreensAdapter<*, *>
@@ -22,7 +18,7 @@ abstract class BaseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        settings = intent.getParcelableExtra(KEY_SCREEN_SETTINGS) as ScreenSettings
+        settings = screensAdapter.getCurrentSettings()
 
         setTheme(settings.themeId)
         settings.layoutId?.run {
@@ -56,9 +52,14 @@ abstract class BaseActivity : AppCompatActivity() {
         screensAdapter.onBackPressed()
     }
 
+    fun superOnBackPressed() {
+        super.onBackPressed()
+    }
+
     //todo: add onActivityResult()
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        super.onCreateOptionsMenu(menu)
         settings.menuId?.let {
             menuInflater.inflate(it, menu)
         }

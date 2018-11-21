@@ -11,14 +11,14 @@ import android.view.MenuItem
 import com.e16din.datamanager.DataManager
 import com.e16din.datamanager.getData
 import com.e16din.datamanager.putData
+import com.e16din.datamanager.remove
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.activities.DefaultActivity
 import com.e16din.screensadapter.activities.LandscapeActivity
 import com.e16din.screensadapter.activities.PortraitActivity
-import com.e16din.screensadapter.binders.BaseScreenBinder
+import com.e16din.screensadapter.binders.android.BaseAndroidScreenBinder
 import com.e16din.screensadapter.settings.ScreenSettings
-import com.e16din.screensmodel.AppModel
-import com.e16din.screensmodel.ServerModel
+import com.e16din.screensmodel.BaseApp
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
@@ -28,14 +28,14 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.set
 
-abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
+abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         androidApp: Application,
         appModel: APP,
         serverModel: SERVER,
         private val delayForSplashMs: Long = 1500) {
 
     companion object {
-        private const val TAG = "adapter.debug"
+        private const val TAG = "screensAdapter.debug"
     }
 
     object DATA {
@@ -55,10 +55,10 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
     // Note: MainScreen -> Screens
     private val screensByMainScreenClsMap = hashMapOf<Class<*>, Collection<Any>>()
     // Note: Screen -> Binders
-    private val bindersByScreenClsMap = hashMapOf<Class<*>, Collection<BaseScreenBinder>>()
-    private val hiddenBinders: ArrayList<BaseScreenBinder> = arrayListOf()
+    private val bindersByScreenClsMap = hashMapOf<Class<*>, Collection<BaseAndroidScreenBinder>>()
+    private val hiddenBinders: ArrayList<BaseAndroidScreenBinder> = arrayListOf()
 
-    private val screenSettingsStack = Stack<ScreenSettings>()
+    private var screenSettingsStack = Stack<ScreenSettings>()
 
     private lateinit var firstScreenSettings: ScreenSettings
 
@@ -68,13 +68,13 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
     var onOptionsItemSelected: ((item: MenuItem) -> Boolean)? = null
     var onPrepareOptionsMenu: ((menu: Menu?) -> Boolean)? = null
 
-    private fun getCurrentBinders(): Collection<BaseScreenBinder> {
+    private fun getCurrentBinders(): Collection<BaseAndroidScreenBinder> {
         if (screenSettingsStack.isEmpty()) {
             return emptyList()
         }
 
         val screens = getCurrentScreens()
-        val allBinders = ArrayList<BaseScreenBinder>()
+        val allBinders = ArrayList<BaseAndroidScreenBinder>()
         screens.forEach { screen ->
             val bindersForScreen = bindersByScreenClsMap[screen.javaClass]
                     ?: throw NullPointerException("Array of binders must not be null!")
@@ -114,7 +114,6 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
 
         starter?.run {
             val intent = Intent(this, getActivity(settings))
-            intent.putExtra(BaseActivity.KEY_SCREEN_SETTINGS, settings)
             if (settings.finishAllPreviousScreens) {
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
             }
@@ -122,12 +121,17 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
         }
     }
 
+    //NOTE: it is used in generated screens adapter
     protected fun createNotFoundException(name: String) =
             IllegalStateException("Invalid Screen!!! The \"$name\" screen is not found in the generator.")
 
-    abstract fun generateBinders(screenCls: Class<*>): Collection<BaseScreenBinder>
+    abstract fun generateBinders(screenCls: Class<*>): Collection<BaseAndroidScreenBinder>
 
-    abstract fun generateScreens(mainScreenCls: Class<*>): Collection<Any>
+    abstract fun generateScreens(mainScreenCls: Class<*>, data: Any?): Collection<Any>
+
+    fun restoreScreen(screenName: String): Any? {
+        return screenName.getData()
+    }
 
     // BaseActivity callbacks
 
@@ -139,6 +143,16 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
                 showNextScreen(firstScreenSettings, activity)
                 ActivityCompat.finishAfterTransition(activity)
             }
+        }
+    }
+
+    fun onActivityStart(activity: BaseActivity) {
+        showScreenInProgress = true
+        currentActivityRef = WeakReference(activity)
+
+        val binders = getCurrentBinders()
+        binders.forEach { binder ->
+            binder.onShow()
         }
     }
 
@@ -171,16 +185,6 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
         }
         if (!showScreenInProgress) {
             getApp().onHideAllScreens(screenSettingsStack.size)
-        }
-    }
-
-    fun onActivityStart(activity: BaseActivity) {
-        showScreenInProgress = true
-        currentActivityRef = WeakReference(activity)
-
-        val binders = getCurrentBinders()
-        binders.forEach { binder ->
-            binder.onShow()
         }
     }
 
@@ -228,16 +232,15 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
     fun getApp() = appModelRef.get()!!
     fun getServer() = serverModelRef.get()!!
 
-    fun getCurrentData() = screenSettingsStack.peek()?.data
-
     fun setFirstScreen(settings: ScreenSettings) {
         firstScreenSettings = settings
     }
 
-    fun showNextScreen(settings: ScreenSettings, activity: Activity? = null) {
+    fun showNextScreen(settings: ScreenSettings, activity: Activity? = null, data: Any? = null) {
+        settings.screenCls.name.remove()
         onBackPressed = null
 
-        val screens = generateScreens(settings.screenCls)
+        val screens = generateScreens(settings.screenCls, data)
         screensByMainScreenClsMap[settings.screenCls] = screens
 
         screens.forEach { screen ->
@@ -309,6 +312,8 @@ abstract class ScreensAdapter<out APP : AppModel, out SERVER : ServerModel>(
     }
 
     fun onPrepareOptionsMenu(menu: Menu?): Boolean {
-        return onPrepareOptionsMenu?.invoke(menu) ?: false
+        return onPrepareOptionsMenu?.invoke(menu) ?: true
     }
+
+    fun getCurrentSettings() = screenSettingsStack.peek()
 }
