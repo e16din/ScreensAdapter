@@ -4,7 +4,7 @@ import com.e16din.screensadapter.annotation.AddSupportBinder
 import com.e16din.screensadapter.annotation.BindScreen
 import com.e16din.screensadapter.annotation.model.App
 import com.e16din.screensadapter.annotation.model.Screen
-import com.e16din.screensadapter.annotation.model.ServerAgent
+import com.e16din.screensadapter.annotation.model.Server
 import com.e16din.screensadapter.processor.ScreensAdapterProcessor.Companion.KAPT_KOTLIN_GENERATED_OPTION_NAME
 import com.squareup.kotlinpoet.*
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.plusParameter
@@ -57,7 +57,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
     override fun getSupportedAnnotationTypes(): Set<String> {
         val annotations = HashSet<String>()
         annotations.add(App::class.java.canonicalName)
-        annotations.add(ServerAgent::class.java.canonicalName)
+        annotations.add(Server::class.java.canonicalName)
         annotations.add(Screen::class.java.canonicalName)
         annotations.add(BindScreen::class.java.canonicalName)
         annotations.add(AddSupportBinder::class.java.canonicalName)
@@ -97,7 +97,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
     }
 
     private fun processServer(roundEnv: RoundEnvironment) {
-        roundEnv.getElementsAnnotatedWith(ServerAgent::class.java)
+        roundEnv.getElementsAnnotatedWith(Server::class.java)
                 .firstOrNull()
                 ?.run {
                     serverClassName = this.getFullName()

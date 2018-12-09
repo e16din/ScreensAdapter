@@ -9,7 +9,6 @@ import android.view.View
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.binders.BaseCommonScreenBinder
-import com.e16din.screensadapter.fragments.SimpleFragment
 import com.e16din.screensmodel.BaseScreen
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
@@ -69,10 +68,6 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
 
     fun resetOnBackPressedListener() {
         setOnBackPressedListener(null)
-    }
-
-    fun createFragment(layoutId: Int, hasOptionsMenu: Boolean = false): Fragment {
-        return SimpleFragment.create(layoutId, hasOptionsMenu)
     }
 
     protected fun findFragmentById(fragmentId: Int): Fragment? {

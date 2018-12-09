@@ -25,26 +25,26 @@ abstract class BaseActivity : AppCompatActivity() {
             setContentView(this)
         }
 
-        screensAdapter.onActivityCreated(this)
+        screensAdapter.onActivityCreated(this, settings.screenCls)
     }
 
     override fun onStart() {
         super.onStart()
-        screensAdapter.onActivityStart(this)
+        screensAdapter.onActivityStart(this, settings.screenCls)
     }
 
     override fun onResume() {
         super.onResume()
-        screensAdapter.onActivityResume()
+        screensAdapter.onActivityResume(settings.screenCls)
     }
 
     override fun onPause() {
-        screensAdapter.onActivityPause()
+        screensAdapter.onActivityPause(settings.screenCls)
         super.onPause()
     }
 
     override fun onStop() {
-        screensAdapter.onActivityStop(this)
+        screensAdapter.onActivityStop(this, settings.screenCls)
         super.onStop()
     }
 

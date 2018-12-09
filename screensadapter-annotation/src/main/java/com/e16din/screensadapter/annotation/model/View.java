@@ -7,8 +7,13 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.SOURCE)
-public @interface Screen {
-    Class data() default Object.class;
+public @interface View {
+    //todo: как сделать вызов элементов списка с привязкой к основному Screen,
+    //todo:  с привязкой к основному Binder?
 
-    boolean saveOnHide() default true;
+    //todo: Как сделать презентер с логикой для любого View?
+    //todo: Кто будет вызывать этот презентер? Зачем он нужен когда есть саппорт биндеры? Не нужен.
+
+    //todo: Как сделать презентер с логикой для любого элемента списка?
+    //todo: Кто будет вызывать этот презентер? Этот презентер будет вызывать адаптер на onBind()
 }
