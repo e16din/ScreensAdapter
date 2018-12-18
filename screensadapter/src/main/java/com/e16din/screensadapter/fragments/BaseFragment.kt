@@ -61,9 +61,6 @@ class BaseFragment : Fragment() {
                 screensAdapter.onFragmentFocus(screenCls)
             }
             onFocusCalled = false
-
-        } else {
-            screensAdapter.onFragmentLostFocus(screenCls)
         }
     }
 
@@ -71,6 +68,12 @@ class BaseFragment : Fragment() {
         super.onResume()
         onFocusCalled = true
         screensAdapter.onFragmentFocus(screenCls)
+    }
+
+    override fun onPause() {
+        onFocusCalled = false
+        screensAdapter.onFragmentLostFocus(screenCls)
+        super.onPause()
     }
 
     override fun onStart() {
