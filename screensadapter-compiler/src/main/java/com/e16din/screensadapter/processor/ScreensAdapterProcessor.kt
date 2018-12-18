@@ -288,7 +288,10 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
         var mainScreensObjectsCode = ""
         screensByMainScreenMap.keys.forEach { mainScreenName ->
-            val dataType = dataTypeByMainScreenMap[mainScreenName]
+            var dataType = dataTypeByMainScreenMap[mainScreenName]
+            if (dataType == "int") {
+                dataType = "Int"
+            }
             mainScreensObjectsCode += "$PADDING_2$mainScreenName::class.java -> arrayListOf(\n" +
                     screensByMainScreenMap[mainScreenName]
                             ?.joinToString(separator = ",\n") { screenName ->
