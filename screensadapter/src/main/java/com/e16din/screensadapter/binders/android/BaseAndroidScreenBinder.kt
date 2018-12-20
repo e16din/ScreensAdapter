@@ -9,10 +9,10 @@ import android.view.View
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.binders.BaseCommonScreenBinder
+import com.e16din.screensadapter.fragments.BaseFragment
 import com.e16din.screensmodel.BaseScreen
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
-import java.util.*
 
 // Note! Hide supportScreens only through supportScreens screensAdapter.hideCurrentScreen()
 abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
@@ -23,11 +23,13 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
     private fun Activity.getContentView() =
             this.findViewById<View>(android.R.id.content)!!
 
+    var fragmentId: Long = -2
+
     protected val activity: BaseActivity
         get() = screensAdapter.getCurrentActivity()
                 ?: throw NullPointerException("Activity must be not null!")
 
-    protected val view: View
+    protected open val view: View
         get() = activity.getContentView()
 
     protected val resources: Resources
@@ -82,8 +84,42 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
         return getAllFragments().first { it.javaClass.isInstance(cls) }
     }
 
+    protected fun getAllFragments(fragments: List<Fragment>): List<Fragment> {
+        val result = ArrayList<Fragment>()
+        forEachFragmentRecursively(fragments) {
+            result.add(it)
+            return@forEachFragmentRecursively false
+        }
+        return result
+    }
+
     protected fun getAllFragments(): List<Fragment> {
-        return activity.supportFragmentManager.fragments
+        val fragments = activity.supportFragmentManager.fragments
+        return getAllFragments(fragments)
+    }
+
+    protected fun forEachFragmentRecursively(fragments: List<Fragment>,
+                                             function: (fragment: Fragment) -> Boolean): MutableList<Fragment> {
+        val result = ArrayList<Fragment>()
+        fragments.forEach {
+            val success = function.invoke(it)
+            if (success) {
+                return@forEach
+            }
+
+            val childFragments = it.childFragmentManager.fragments
+            forEachFragmentRecursively(childFragments, function)
+        }
+        return result
+    }
+
+    fun findCurrentFragment(fragments: List<Fragment>): BaseFragment? {
+        return getAllFragments(fragments).find { it is BaseFragment && it.fragmentId == fragmentId } as BaseFragment?
+    }
+
+    fun findCurrentFragment(): BaseFragment? {
+        val fragments = activity.supportFragmentManager.fragments
+        return findCurrentFragment(fragments)
     }
 
     protected fun getVisibleFragments(): List<Fragment> {
