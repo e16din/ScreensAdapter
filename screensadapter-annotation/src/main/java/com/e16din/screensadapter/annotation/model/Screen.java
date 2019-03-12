@@ -10,5 +10,7 @@ import java.lang.annotation.Target;
 public @interface Screen {
     Class data() default Object.class;
 
+    Class parent() default Object.class;
+
     boolean saveOnHide() default true;
 }

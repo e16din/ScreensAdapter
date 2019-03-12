@@ -20,9 +20,9 @@ repositories {
 }
 
 dependencies {
-    kapt 'com.github.e16din:screensadapter-compiler:0.8.57'
-    implementation 'com.github.e16din:screensadapter-annotation:0.8.57'
-    implementation 'com.github.e16din:screensadapter:0.8.57'
-    implementation 'com.github.e16din:screensmodel:0.8.57'
+    kapt 'com.github.e16din:screensadapter-compiler:0.8.78'
+    implementation 'com.github.e16din:screensadapter-annotation:0.8.78'
+    implementation 'com.github.e16din:screensadapter:0.8.78'
+    implementation 'com.github.e16din:screensmodel:0.8.78'
 }
 ```

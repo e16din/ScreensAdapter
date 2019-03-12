@@ -2,16 +2,17 @@ package com.e16din.screensadapter.binders.android
 
 import android.app.Activity
 import android.content.res.Resources
-import android.support.v4.app.Fragment
-import android.support.v4.content.ContextCompat
 import android.util.Log
 import android.view.View
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.binders.BaseCommonScreenBinder
 import com.e16din.screensadapter.fragments.BaseFragment
 import com.e16din.screensmodel.BaseScreen
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 // Note! Hide supportScreens only through supportScreens screensAdapter.hideCurrentScreen()
@@ -35,40 +36,51 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
     protected val resources: Resources
         get() = activity.resources
 
-    var onBackPressed: (() -> Unit)? = null
-
-    fun getString(id: Int): String = resources.getString(id)
-    fun getString(id: Int, formatArgs: Array<Any> = emptyArray()): String {
-        return resources.getString(id, formatArgs)
+    override fun getString(id: Int, formatArgs: Array<Any>): String {
+        return if (formatArgs.isEmpty()) {
+            resources.getString(id)
+        } else {
+            resources.getString(id, formatArgs)
+        }
     }
 
-    fun getColor(id: Int) = ContextCompat.getColor(activity, id)
+    override fun getColor(id: Int) = ContextCompat.getColor(activity, id)
 
     override fun hideScreen() {
+        Log.d("ScreensAdapter", "hideScreen()")
         screensAdapter.hideCurrentScreen()
     }
 
-    override fun runOnBackgroundThread(runnable: suspend () -> Unit) {
-        launch {
+    override fun runOnBackgroundThread(runnable: suspend () -> Unit): Job {
+        return launch {
             runnable()
         }
     }
 
-    override fun runOnUiThread(runnable: suspend () -> Unit) {
-        launch(Main) {
+    override fun runOnUiThread(runnable: suspend () -> Unit): Job {
+        return launch(Main) {
             runnable()
         }
     }
 
-    override fun log(message: String) {
-        Log.d("logs", message)
+    override fun log(message: String, tag: String, type: BaseScreen.LogType) {
+        when (type) {
+            BaseScreen.LogType.Debug -> Log.d(tag, message)
+            BaseScreen.LogType.Info -> Log.i(tag, message)
+            BaseScreen.LogType.Warning -> Log.w(tag, message)
+            BaseScreen.LogType.Error -> Log.e(tag, message)
+        }
     }
 
-    fun setOnBackPressedListener(listener: (() -> Unit)?) {
-        onBackPressed = listener
+    override fun log(e: Throwable, message: String, tag: String) {
+        Log.e(tag, message, e)
     }
 
-    fun resetOnBackPressedListener() {
+    protected fun setOnBackPressedListener(listener: (() -> Unit)?) {
+        screensAdapter.onBackPressed = listener
+    }
+
+    override fun resetOnBackPressedListener() {
         setOnBackPressedListener(null)
     }
 
@@ -118,9 +130,11 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
     }
 
     fun findCurrentFragment(): BaseFragment? {
-        val fragments = activity.supportFragmentManager.fragments
+        val fragments = getParentFragmentManager().fragments
         return findCurrentFragment(fragments)
     }
+
+    protected fun getParentFragmentManager() = activity.supportFragmentManager
 
     protected fun getVisibleFragments(): List<Fragment> {
         val allFragments = getAllFragments()
@@ -133,3 +147,5 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
         return visibleFragments
     }
 }
+
+

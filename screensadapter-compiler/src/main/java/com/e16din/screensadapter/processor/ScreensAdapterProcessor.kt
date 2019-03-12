@@ -48,7 +48,9 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
     private var screensByMainScreenMap = HashMap<String, List<String>>()
     private var screensByBinderMap = HashMap<String, List<String>>()
-    private var dataTypeByMainScreenMap = HashMap<String, String>()
+
+    private var screenDataTypeByMainScreenMap = HashMap<String, String>()
+    private var screenParentTypeByMainScreenMap = HashMap<String, String>()
 
     override fun getSupportedSourceVersion(): SourceVersion {
         return SourceVersion.latestSupported()
@@ -120,14 +122,22 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                 roundEnv.getElementsAnnotatedWith(Screen::class.java)
 
         binderElements.forEach { element ->
+            val annotation = element.getAnnotation(Screen::class.java)
             val dataTypeName = try {
-                element.getAnnotation(Screen::class.java).data.qualifiedName
+                annotation.data.qualifiedName
+            } catch (e: MirroredTypeException) {
+                e.typeMirror.toString()
+            }
+
+            val parentTypeName = try {
+                annotation.parent.qualifiedName
             } catch (e: MirroredTypeException) {
                 e.typeMirror.toString()
             }
 
             val screenName = element.getFullName()
-            dataTypeByMainScreenMap[screenName] = dataTypeName!!
+            screenDataTypeByMainScreenMap[screenName] = dataTypeName!!
+            screenParentTypeByMainScreenMap[screenName] = parentTypeName!!
         }
     }
 
@@ -285,13 +295,21 @@ class ScreensAdapterProcessor : AbstractProcessor() {
     private fun (TypeSpec.Builder).addGeneratedScreensFunc(): TypeSpec.Builder {
         val mainScreenClsParamName = "mainScreenCls"
         val dataParamName = "data"
+        val parentParamName = "parent"
+
 
         var mainScreensObjectsCode = ""
         screensByMainScreenMap.keys.forEach { mainScreenName ->
-            var dataType = dataTypeByMainScreenMap[mainScreenName]
+            var dataType = screenDataTypeByMainScreenMap[mainScreenName]
             if (dataType == "int") {
                 dataType = "Int"
             }
+
+            var parentType = screenParentTypeByMainScreenMap[mainScreenName]
+            if (parentType == "int") {
+                parentType = "Int"
+            }
+
             mainScreensObjectsCode += "$PADDING_2$mainScreenName::class.java -> arrayListOf(\n" +
                     screensByMainScreenMap[mainScreenName]
                             ?.joinToString(separator = ",\n") { screenName ->
@@ -299,7 +317,13 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                                     dataParamName
                                 else
                                     "$dataParamName as $dataType"
-                                "restoreScreen(\"$screenName\") ?: $PADDING_3$screenName($data)"
+
+                                val parent = if (parentType.equals("java.lang.Object"))
+                                    parentParamName
+                                else
+                                    "$parentParamName as $parentType"
+
+                                "restoreScreen(\"$screenName\") ?: $PADDING_3$screenName($data, $parent)"
                             } +
                     "$PADDING_2)\n"
         }
@@ -308,6 +332,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                 .addModifiers(KModifier.OVERRIDE)
                 .addParameter(mainScreenClsParamName, ClassName.bestGuess("Class<*>"))
                 .addParameter(dataParamName, ClassName.bestGuess("Any?"))
+                .addParameter(parentParamName, ClassName.bestGuess("Any?"))
                 .addStatement(
                         "${PADDING_1}return when ($mainScreenClsParamName) {\n" +
                                 mainScreensObjectsCode +

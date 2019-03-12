@@ -1,9 +1,9 @@
 package com.e16din.screensadapter.activities
 
 import android.os.Bundle
-import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
+import androidx.appcompat.app.AppCompatActivity
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.ScreensAdapterApplication
 import com.e16din.screensadapter.settings.ScreenSettings

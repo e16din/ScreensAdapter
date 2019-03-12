@@ -1,10 +1,10 @@
 package com.e16din.screensadapter.fragments
 
 import android.os.Bundle
-import android.support.v4.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.ScreensAdapterApplication
 
@@ -83,9 +83,11 @@ class BaseFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        onFocusCalled = true
-        onLostFocusCalled = false
-        screensAdapter.onFragmentFocus(screenCls, fragmentId)
+        if (isVisible) {
+            onFocusCalled = true
+            onLostFocusCalled = false
+            screensAdapter.onFragmentFocus(screenCls, fragmentId)
+        }
     }
 
     override fun onPause() {
@@ -97,7 +99,9 @@ class BaseFragment : Fragment() {
 
     override fun onStart() {
         super.onStart()
-        screensAdapter.onFragmentStart(screenCls, fragmentId)
+        if (isVisible) {
+            screensAdapter.onFragmentStart(screenCls, fragmentId)
+        }
     }
 
     override fun onStop() {
