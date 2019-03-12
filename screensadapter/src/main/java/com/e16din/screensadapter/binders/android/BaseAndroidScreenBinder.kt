@@ -134,7 +134,7 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
         return findCurrentFragment(fragments)
     }
 
-    protected fun getParentFragmentManager() = activity.supportFragmentManager
+    protected open fun getParentFragmentManager() = activity.supportFragmentManager
 
     protected fun getVisibleFragments(): List<Fragment> {
         val allFragments = getAllFragments()
