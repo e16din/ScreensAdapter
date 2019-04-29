@@ -7,10 +7,10 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.SOURCE)
-public @interface BindScreen {
-    Class screen();
+public @interface BindChildScreen {
+    Class parentScreen();
 
-    Class[] supportScreens() default {}; //todo: удалить это
+    Class screen();
 
     Class startAfter() default Object.class;
 

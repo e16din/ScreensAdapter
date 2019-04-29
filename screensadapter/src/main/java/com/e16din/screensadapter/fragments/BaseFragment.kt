@@ -8,6 +8,8 @@ import androidx.fragment.app.Fragment
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.ScreensAdapterApplication
 
+
+
 class BaseFragment : Fragment() {
 
     companion object {
@@ -32,15 +34,12 @@ class BaseFragment : Fragment() {
         }
     }
 
-    private val screensAdapter: ScreensAdapter<*, *>
-        get() = (activity?.application as ScreensAdapterApplication).screensAdapter
+    private val screensAdapter: ScreensAdapter<*, *>?
+        get() = (activity?.application as ScreensAdapterApplication?)?.screensAdapter
 
     private lateinit var screenCls: Class<*>
 
     var fragmentId: Long = -1
-
-    private var onFocusCalled = false
-    private var onLostFocusCalled = false
 
     override fun onCreateView(inflater: LayoutInflater, vContainer: ViewGroup?, savedInstanceState: Bundle?): View? {
         fragmentId = arguments!!.getLong(KEY_FRAGMENT_ID)
@@ -55,57 +54,49 @@ class BaseFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        screensAdapter.onFragmentCreate(screenCls, fragmentId)
-    }
-
-    override fun setUserVisibleHint(isVisibleToUser: Boolean) {
-        val lastVisibleHint = userVisibleHint
-        super.setUserVisibleHint(isVisibleToUser)
-
-        val isSameVisibilityState = lastVisibleHint == isVisibleToUser
-        if (!isResumed || isSameVisibilityState) {
-            return
-        }
-
-        if (isVisibleToUser) {
-            if (!onFocusCalled) {
-                screensAdapter.onFragmentFocus(screenCls, fragmentId)
-            }
-            onFocusCalled = false
-
-        } else {
-            if (!onLostFocusCalled) {
-                screensAdapter.onFragmentLostFocus(screenCls, fragmentId)
-            }
-            onLostFocusCalled = false
-        }
+        screensAdapter?.onFragmentCreate(screenCls, fragmentId)
     }
 
     override fun onResume() {
         super.onResume()
-        if (isVisible) {
-            onFocusCalled = true
-            onLostFocusCalled = false
-            screensAdapter.onFragmentFocus(screenCls, fragmentId)
-        }
+        screensAdapter?.onFragmentFocus(screenCls, fragmentId)
     }
 
     override fun onPause() {
-        onFocusCalled = false
-        onLostFocusCalled = true
-        screensAdapter.onFragmentLostFocus(screenCls, fragmentId)
+        screensAdapter?.onFragmentLostFocus(screenCls, fragmentId)
         super.onPause()
     }
 
     override fun onStart() {
         super.onStart()
-        if (isVisible) {
-            screensAdapter.onFragmentStart(screenCls, fragmentId)
-        }
+        screensAdapter?.onFragmentStart(screenCls, fragmentId)
     }
 
     override fun onStop() {
-        screensAdapter.onFragmentStop(screenCls, fragmentId)
+        screensAdapter?.onFragmentStop(screenCls, fragmentId)
         super.onStop()
+    }
+
+    override fun onDestroy() {
+        screensAdapter?.onFragmentDestroy(screenCls, fragmentId)
+        super.onDestroy()
+    }
+
+    fun onFragmentSelected() {
+        screensAdapter?.onFragmentSelected(screenCls, fragmentId)
+    }
+
+    override fun onDetach() {
+        super.onDetach()
+        try {
+            val childFragmentManager = Fragment::class.java
+                    .getDeclaredField("mChildFragmentManager")
+            childFragmentManager.isAccessible = true
+            childFragmentManager.set(this, null)
+        } catch (e: NoSuchFieldException) {
+            e.printStackTrace()
+        } catch (e: IllegalAccessException) {
+            e.printStackTrace()
+        }
     }
 }

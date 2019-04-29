@@ -1,9 +1,12 @@
 package com.e16din.screensadapter.activities
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import com.e16din.screensadapter.R
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.ScreensAdapterApplication
 import com.e16din.screensadapter.settings.ScreenSettings
@@ -15,12 +18,28 @@ abstract class BaseActivity : AppCompatActivity() {
     private val screensAdapter: ScreensAdapter<*, *>
         get() = (application as ScreensAdapterApplication).screensAdapter
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
 
+    override fun onCreate(savedInstanceState: Bundle?) {
         settings = screensAdapter.getCurrentSettings()
 
-        setTheme(settings.themeId)
+        if (settings.isFullscreen || settings.isDialog) {
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
+        }
+
+        val themeId = if (settings.isDialog) {
+            R.style.DialogTheme
+        } else {
+            settings.themeId
+        }
+        setTheme(themeId)
+
+        requestedOrientation = settings.orientation
+
+        screensAdapter.onActivityCreateBeforeSuperCalled(this, settings.screenCls)
+
+        super.onCreate(savedInstanceState)
+
+
         settings.layoutId?.run {
             setContentView(this)
         }
@@ -48,6 +67,16 @@ abstract class BaseActivity : AppCompatActivity() {
         super.onStop()
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        screensAdapter.onActivityResult(this, requestCode, resultCode, data, settings.screenCls)
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        screensAdapter.onRequestPermissionsResult(requestCode, permissions, grantResults, settings.screenCls)
+    }
+
     override fun onBackPressed() {
         screensAdapter.onBackPressed()
     }
@@ -55,8 +84,6 @@ abstract class BaseActivity : AppCompatActivity() {
     fun superOnBackPressed() {
         super.onBackPressed()
     }
-
-    //todo: add onActivityResult()
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         super.onCreateOptionsMenu(menu)

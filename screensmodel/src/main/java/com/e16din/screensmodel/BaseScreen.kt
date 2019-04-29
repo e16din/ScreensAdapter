@@ -1,5 +1,6 @@
 package com.e16din.screensmodel
 
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 
 open class BaseScreen {
@@ -7,7 +8,7 @@ open class BaseScreen {
     enum class LogType { Debug, Warning, Info, Error }
 
     interface UserAgent {
-        fun hideScreen()
+        fun hideScreen(resultCode: Int = 0)
     }
 
     interface SystemAgent {
@@ -19,7 +20,9 @@ open class BaseScreen {
                 message: String = "",
                 tag: String = "SystemAgent")
 
-        fun runOnBackgroundThread(runnable: suspend () -> Unit): Job
+        fun isVisible(): Boolean
+
+        fun runOnBackgroundThread(runnable: suspend () -> Unit): Deferred<*>
 
         fun runOnUiThread(runnable: suspend () -> Unit): Job
 

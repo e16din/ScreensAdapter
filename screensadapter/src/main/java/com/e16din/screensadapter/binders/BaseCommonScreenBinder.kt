@@ -1,16 +1,15 @@
 package com.e16din.screensadapter.binders
 
 import com.e16din.screensadapter.ScreensAdapter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.GlobalScope
-import kotlin.coroutines.CoroutineContext
+import java.lang.ref.WeakReference
 
 // Note! Hide supportScreens only through supportScreens screensAdapter.hideCurrentScreen()
-abstract class BaseCommonScreenBinder(val screensAdapter: ScreensAdapter<*, *>) :
-        CoroutineScope {
+abstract class BaseCommonScreenBinder(screensAdapter: ScreensAdapter<*, *>) {
 
-    override val coroutineContext: CoroutineContext
-        get() = GlobalScope.coroutineContext
+    private var screensAdapterRef = WeakReference(screensAdapter)
+
+    val screensAdapter: ScreensAdapter<*, *>
+        get() = screensAdapterRef.get()!!
 
     protected lateinit var screensForBinder: Collection<Any>
 
@@ -19,6 +18,8 @@ abstract class BaseCommonScreenBinder(val screensAdapter: ScreensAdapter<*, *>) 
     fun setScreens(screens: Collection<Any>) {
         screensForBinder = screens
     }
+
+    open fun onPrepare() {}
 
     open fun onBind() {}
 

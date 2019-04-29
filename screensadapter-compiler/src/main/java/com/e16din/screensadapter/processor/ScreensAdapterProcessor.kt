@@ -1,6 +1,7 @@
 package com.e16din.screensadapter.processor
 
 import com.e16din.screensadapter.annotation.AddSupportBinder
+import com.e16din.screensadapter.annotation.BindChildScreen
 import com.e16din.screensadapter.annotation.BindScreen
 import com.e16din.screensadapter.annotation.model.App
 import com.e16din.screensadapter.annotation.model.Screen
@@ -46,7 +47,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
     private var appClassName: String? = null
     private var serverClassName: String? = null
 
-    private var screensByMainScreenMap = HashMap<String, List<String>>()
+    private var screensByMainScreenMap = HashMap<String, ArrayList<String>>()
     private var screensByBinderMap = HashMap<String, List<String>>()
 
     private var screenDataTypeByMainScreenMap = HashMap<String, String>()
@@ -85,6 +86,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         processServer(roundEnv)
         processScreens(roundEnv)
         processBinders(roundEnv)
+        processChildBinders(roundEnv)
         processSupportBinders(roundEnv)
 
         if (appClassName != null
@@ -180,6 +182,40 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         }
     }
 
+    private fun processChildBinders(roundEnv: RoundEnvironment) {
+        ">> processChildBinders:".print()
+        val binderElements =
+                roundEnv.getElementsAnnotatedWith(BindChildScreen::class.java)
+
+        binderElements.forEach { element ->
+            val screenName = try {
+                element.getAnnotation(BindChildScreen::class.java).screen.qualifiedName
+            } catch (e: MirroredTypeException) {
+                e.typeMirror.toString()
+            }
+
+            val parentScreenName = try {
+                element.getAnnotation(BindChildScreen::class.java).parentScreen.qualifiedName
+            } catch (e: MirroredTypeException) {
+                e.typeMirror.toString()
+            }
+
+            val annotationMirror = element.annotationMirrors.first()
+            val mirrorAsStr = annotationMirror.toString()
+            mirrorAsStr.print()
+
+            screensByMainScreenMap[parentScreenName]?.add(screenName!!)
+
+            if (!isObjectClass(screenName)) {
+                val binderName = element.getFullName()
+                screensByBinderMap[binderName] = listOf(screenName!!)
+            }
+        }
+        screensByBinderMap.forEach { binderName, screensNames ->
+            "$binderName: $screensNames".print()
+        }
+    }
+
     private fun processSupportBinders(roundEnv: RoundEnvironment) {
         "processSupportBinders:".print()
         val addSupportBinderElements =
@@ -213,7 +249,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
             screensClasses.forEach { screenName ->
                 if (screensByMainScreenMap[screenName] == null) {
-                    screensByMainScreenMap[screenName] = listOf(screenName)
+                    screensByMainScreenMap[screenName] = arrayListOf(screenName)
                 }
             }
         }

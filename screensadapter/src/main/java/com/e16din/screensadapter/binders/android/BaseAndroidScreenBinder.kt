@@ -1,6 +1,7 @@
 package com.e16din.screensadapter.binders.android
 
 import android.app.Activity
+import android.content.Intent
 import android.content.res.Resources
 import android.util.Log
 import android.view.View
@@ -9,22 +10,22 @@ import androidx.fragment.app.Fragment
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.binders.BaseCommonScreenBinder
-import com.e16din.screensadapter.fragments.BaseFragment
 import com.e16din.screensmodel.BaseScreen
-import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlin.coroutines.CoroutineContext
 
 // Note! Hide supportScreens only through supportScreens screensAdapter.hideCurrentScreen()
 abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
         BaseCommonScreenBinder(screensAdapter),
+        CoroutineScope,
         BaseScreen.SystemAgent,
         BaseScreen.UserAgent {
 
-    private fun Activity.getContentView() =
-            this.findViewById<View>(android.R.id.content)!!
+    override val coroutineContext: CoroutineContext
+        get() = SupervisorJob() + Dispatchers.Main
 
-    var fragmentId: Long = -2
+    fun Activity.getContentView() =
+            this.findViewById<View>(android.R.id.content)!!
 
     protected val activity: BaseActivity
         get() = screensAdapter.getCurrentActivity()
@@ -46,22 +47,24 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
 
     override fun getColor(id: Int) = ContextCompat.getColor(activity, id)
 
-    override fun hideScreen() {
+    override fun hideScreen(resultCode: Int) {
         Log.d("ScreensAdapter", "hideScreen()")
-        screensAdapter.hideCurrentScreen()
+        screensAdapter.hideCurrentScreen(resultCode)
     }
 
-    override fun runOnBackgroundThread(runnable: suspend () -> Unit): Job {
-        return launch {
-            runnable()
-        }
+    override fun onHide() {
+        coroutineContext.cancelChildren()
     }
 
-    override fun runOnUiThread(runnable: suspend () -> Unit): Job {
-        return launch(Main) {
-            runnable()
-        }
+    override fun runOnBackgroundThread(runnable: suspend () -> Unit) = async {
+        runnable.invoke()
     }
+
+    override fun runOnUiThread(runnable: suspend () -> Unit) = launch {
+        runnable.invoke()
+    }
+
+    override fun isVisible() = true
 
     override fun log(message: String, tag: String, type: BaseScreen.LogType) {
         when (type) {
@@ -125,15 +128,6 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
         return result
     }
 
-    fun findCurrentFragment(fragments: List<Fragment>): BaseFragment? {
-        return getAllFragments(fragments).find { it is BaseFragment && it.fragmentId == fragmentId } as BaseFragment?
-    }
-
-    fun findCurrentFragment(): BaseFragment? {
-        val fragments = getParentFragmentManager().fragments
-        return findCurrentFragment(fragments)
-    }
-
     protected open fun getParentFragmentManager() = activity.supportFragmentManager
 
     protected fun getVisibleFragments(): List<Fragment> {
@@ -146,6 +140,10 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
         }
         return visibleFragments
     }
+
+    open fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {}
+
+    open fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {}
 }
 
 
