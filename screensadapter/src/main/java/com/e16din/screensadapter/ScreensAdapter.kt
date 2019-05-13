@@ -14,6 +14,7 @@ import com.e16din.datamanager.putData
 import com.e16din.datamanager.remove
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.activities.DefaultActivity
+import com.e16din.screensadapter.activities.DialogActivity
 import com.e16din.screensadapter.binders.android.BaseAndroidScreenBinder
 import com.e16din.screensadapter.binders.android.FragmentScreenBinder
 import com.e16din.screensadapter.fragments.BaseFragment
@@ -105,7 +106,10 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
             return settings.activityCls
         }
 
-        return DefaultActivity::class.java
+        return if (settings.isDialog)
+            DialogActivity::class.java
+        else
+            DefaultActivity::class.java
     }
 
     private fun startActivity(settings: ScreenSettings, activity: Activity? = null) {
@@ -500,7 +504,8 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
             val prevSettings = screenSettingsStack.peek()
             setHiddenBinders(prevSettings)
 
-            if (prevSettings.finishOnNextScreen || settings.finishPreviousScreen) {
+
+            if (settings.finishPreviousScreen) {
                 popScreen()
                 bindersByScreenClsMap[prevSettings.screenCls] = emptyList()
             }

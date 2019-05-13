@@ -22,6 +22,8 @@ open class BaseScreen {
 
         fun isVisible(): Boolean
 
+        fun isOnline(): Boolean
+
         fun runOnBackgroundThread(runnable: suspend () -> Unit): Deferred<*>
 
         fun runOnUiThread(runnable: suspend () -> Unit): Job

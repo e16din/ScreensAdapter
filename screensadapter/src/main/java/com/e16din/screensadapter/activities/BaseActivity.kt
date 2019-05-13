@@ -6,7 +6,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.e16din.screensadapter.R
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.ScreensAdapterApplication
 import com.e16din.screensadapter.settings.ScreenSettings
@@ -26,19 +25,15 @@ abstract class BaseActivity : AppCompatActivity() {
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
         }
 
-        val themeId = if (settings.isDialog) {
-            R.style.DialogTheme
-        } else {
-            settings.themeId
+        if (!settings.isDialog) {
+            setTheme(settings.themeId)
         }
-        setTheme(themeId)
 
         requestedOrientation = settings.orientation
 
         screensAdapter.onActivityCreateBeforeSuperCalled(this, settings.screenCls)
 
         super.onCreate(savedInstanceState)
-
 
         settings.layoutId?.run {
             setContentView(this)

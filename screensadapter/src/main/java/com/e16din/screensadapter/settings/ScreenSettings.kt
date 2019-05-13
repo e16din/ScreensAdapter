@@ -9,9 +9,8 @@ open class ScreenSettings(
         val menuId: Int? = null,
         val orientation: Int = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
         val themeId: Int = R.style.Theme_AppCompat,
-        val finishOnNextScreen: Boolean = false,
-        var finishPreviousScreen: Boolean = false,
-        var finishAllPreviousScreens: Boolean = false,
+        var finishPreviousScreen: Boolean = false, //todo: try to manage screens independent of the activity stack
+        var finishAllPreviousScreens: Boolean = false, //todo: and move  finishPreviousScreen and finishAllPreviousScreens to SystemAgent
         val activityCls: Class<*> = Any::class.java,
         val isFullscreen: Boolean = false,
         val isDialog: Boolean = false,

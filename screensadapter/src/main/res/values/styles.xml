@@ -1,34 +1,13 @@
 <resources>
 
-    <style name="AppTheme" parent="@style/Base.Theme.AppCompat">
-        <!--&lt;!&ndash; Customize your theme here. &ndash;&gt;-->
-        <!--<item name="colorPrimary">@color/colorPrimary</item>-->
-        <!--<item name="colorPrimaryDark">@color/colorPrimaryDark</item>-->
-        <!--<item name="colorAccent">@color/colorAccent</item>-->
-        <!--<item name="actionBarTheme">@style/ActionBarTheme</item>-->
-        <!--<item name="colorControlNormal">@color/actionBarItemColor</item>-->
-        <!--<item name="android:windowContentOverlay">@null</item>-->
-        <!--<item name="windowActionBar">false</item>-->
-        <!--<item name="windowNoTitle">true</item>-->
-    </style>
-
-    <style name="DialogTheme" parent="Base.Theme.AppCompat.Dialog">
-        <item name="windowNoTitle">true</item>
-        <item name="windowActionBar">false</item>
-        <!--<item name="android:windowFullscreen">true</item>-->
-        <!--<item name="android:windowIsFloating">false</item>-->
-        <item name="android:windowMinWidthMinor">70%</item>
-        <item name="android:windowMinWidthMajor">70%</item>
+    <style name="StarterTheme" parent="@style/Base.Theme.AppCompat">
+        <item name="android:windowBackground">@drawable/sa_bg_splash</item>
     </style>
 
     <style name="AppTheme.Dialog" parent="Base.Theme.AppCompat.Light.Dialog">
         <!-- removing the dialog's action bar -->
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-    </style>
-
-    <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
-        <!--<item name="android:windowBackground">@drawable/splash_view</item>-->
     </style>
 
 </resources>

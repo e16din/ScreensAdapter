@@ -337,14 +337,9 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         var mainScreensObjectsCode = ""
         screensByMainScreenMap.keys.forEach { mainScreenName ->
             var dataType = screenDataTypeByMainScreenMap[mainScreenName]
-            if (dataType == "int") {
-                dataType = "Int"
-            }
+            dataType = normalizeType(dataType)
 
-            var parentType = screenParentTypeByMainScreenMap[mainScreenName]
-            if (parentType == "int") {
-                parentType = "Int"
-            }
+            val parentType = screenParentTypeByMainScreenMap[mainScreenName]
 
             mainScreensObjectsCode += "$PADDING_2$mainScreenName::class.java -> arrayListOf(\n" +
                     screensByMainScreenMap[mainScreenName]
@@ -378,6 +373,16 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                 .build()
 
         return this.addFunction(funcSpec)
+    }
+
+    private fun normalizeType(dataType: String?): String? {
+        return when (dataType) {
+            "int" -> "Int"
+            "long" -> "Long"
+            "double" -> "Double"
+            "java.lang.String" -> "String"
+            else -> dataType
+        }
     }
 
     private fun (TypeSpec.Builder).addConstructor(): TypeSpec.Builder {
@@ -425,8 +430,9 @@ private fun String.substringBetween(start: String, end: String): String? {
 //        androidApp: Application,
 //        app: PurchasesAppAgent,
 //        server: PurchasesServerAgent,
-//        delayForSplashMs: Long
-//) : ScreensAdapter<com.e16din.purchases.app.PurchasesAppAgent, com.e16din.purchases.server.PurchasesServerAgent>(androidApp, app, server, delayForSplashMs) {
+//        delayForSplashMs: Long,
+//        splashTheme: Int
+//) : ScreensAdapter<com.e16din.purchases.app.PurchasesAppAgent, com.e16din.purchases.server.PurchasesServerAgent>(androidApp, app, server, delayForSplashMs, splashTheme) {
 //    override fun generateScreens(mainScreenCls: Class<*>, data:Any?): Collection<Any> {
 //        return when (mainScreenCls) {
 //            com.e16din.purchases.screens.main.MainScreen::class.java -> arrayListOf(

@@ -5,7 +5,7 @@
 
         <activity
             android:name="com.e16din.screensadapter.activities.StarterActivity"
-            android:theme="@style/AppTheme">
+            android:theme="@style/StarterTheme">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
@@ -16,6 +16,10 @@
 
         <activity
             android:name="com.e16din.screensadapter.activities.DefaultActivity"/>
+
+        <activity
+            android:name="com.e16din.screensadapter.activities.DialogActivity"
+            android:theme="@style/AppTheme.Dialog"/>
 
     </application>
 

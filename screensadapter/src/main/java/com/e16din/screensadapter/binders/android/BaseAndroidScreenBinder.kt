@@ -1,8 +1,11 @@
 package com.e16din.screensadapter.binders.android
 
+import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
+import android.net.ConnectivityManager
 import android.util.Log
 import android.view.View
 import androidx.core.content.ContextCompat
@@ -62,6 +65,17 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
 
     override fun runOnUiThread(runnable: suspend () -> Unit) = launch {
         runnable.invoke()
+    }
+
+    @SuppressLint("MissingPermission")
+    override fun isOnline(): Boolean {
+        try {
+            val connectivityManager =
+                    activity.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            return connectivityManager.activeNetworkInfo?.isConnected == true
+        } catch (e: Exception) {
+            return false
+        }
     }
 
     override fun isVisible() = true
