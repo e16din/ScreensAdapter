@@ -94,7 +94,7 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
     }
 
     protected fun setOnBackPressedListener(listener: (() -> Unit)?) {
-        screensAdapter.onBackPressed = listener
+        screensAdapter.onBackPressedListener = listener
     }
 
     override fun resetOnBackPressedListener() {

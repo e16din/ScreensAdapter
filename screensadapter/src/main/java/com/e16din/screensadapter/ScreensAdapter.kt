@@ -30,7 +30,7 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         private val delayForSplashMs: Long = 1500) {
 
     companion object {
-        private const val TAG = "screensAdapter.debug"
+        private const val TAG = "SA.Core"
     }
 
     object DATA {
@@ -42,38 +42,36 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
     }
 
     private val androidAppRef = WeakReference<Application>(androidApp)
-    internal var currentActivityRef = WeakReference<BaseActivity>(null)
 
     private var appModelRef = WeakReference<APP>(appModel)
     private var serverModelRef = WeakReference<SERVER>(serverModel)
 
+    private lateinit var firstScreenSettings: ScreenSettings
+    private var firstData: Any? = null
+
+    private var nextFragmentId = Long.MAX_VALUE
+
+    internal var currentActivityRef = WeakReference<BaseActivity>(null)
+
     // Note: MainScreen -> Screens
-    private val screensByMainScreenClsMap = hashMapOf<Class<*>, Collection<Any>>()
+    @Deprecated("See addChildBinder()") //todo: remove it and add "currentScreenCls" variable
+    internal val supportScreensByMainScreenClsMap = hashMapOf<Class<*>, Collection<Any>>()
     // Note: Screen -> Binders
-    private val bindersByScreenClsMap = hashMapOf<Class<*>, Collection<BaseAndroidScreenBinder>>()
+    internal val bindersByScreenClsMap = hashMapOf<Class<*>, Collection<BaseAndroidScreenBinder>>()
     // Note: Screen -> fragmentId -> Binders
-    private val fragmentBindersByScreenClsMap = hashMapOf<Class<*>, HashMap<Long, List<BaseAndroidScreenBinder>>>()
+    internal val fragmentBindersByScreenClsMap = hashMapOf<Class<*>, MutableMap<Long, List<BaseAndroidScreenBinder>>>()
     // Note: MainScreen -> ChildScreen -> Binders
-    internal val childBindersByMainScreenClsMap = hashMapOf<Class<*>, HashMap<Class<*>, List<BaseAndroidScreenBinder>>>()
+    internal val childBindersByMainScreenClsMap = hashMapOf<Class<*>, MutableMap<Class<*>, List<BaseAndroidScreenBinder>>>()
+
     internal val hiddenBinders: ArrayList<BaseAndroidScreenBinder> = arrayListOf()
 
     var screenSettingsStack = Stack<ScreenSettings>()
 
-    private lateinit var firstScreenSettings: ScreenSettings
-    private var firstData: Any? = null
+    var onBackPressedListener: (() -> Unit)? = null
+    var onOptionsItemSelectedListener: ((item: MenuItem) -> Boolean)? = null
+    var onPrepareOptionsMenuListener: ((menu: Menu?) -> Boolean)? = null
 
-    internal var isScreenShown = false
-
-    var onBackPressed: (() -> Unit)? = null
-    var onOptionsItemSelected: ((item: MenuItem) -> Boolean)? = null
-    var onPrepareOptionsMenu: ((menu: Menu?) -> Boolean)? = null
-
-    private var nextFragmentId = Long.MAX_VALUE
-
-    internal fun getBindersByScreen(screenCls: Class<*>): Collection<BaseAndroidScreenBinder> {
-        return bindersByScreenClsMap[screenCls]
-                ?: throw NullPointerException("screenCls:${screenCls.simpleName} | Array of binders must not be null!")
-    }
+    // NOTE: Kowabunga!
 
     private fun getActivity(settings: ScreenSettings): Class<*> {
         if (settings.activityCls != Any::class.java) {
@@ -110,102 +108,7 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         }
     }
 
-    //NOTE: it is used in generated screens adapter
-    protected fun createNotFoundException(name: String) =
-            IllegalStateException("Invalid Screen!!! The \"$name\" screen is not found in the generator.")
-
-    abstract fun generateBinders(screenCls: Class<*>): Collection<BaseAndroidScreenBinder>
-
-    abstract fun generateScreens(mainScreenCls: Class<*>, data: Any?, parent: Any?): Collection<Any>
-
-    fun restoreScreen(screenName: String): Any? {
-        return screenName.getData()
-    }
-
-    // BaseFragment callbacks
-
-    fun onFragmentStart(screenCls: Class<*>, fragmentId: Long) {
-        Log.d(TAG, "     onFragmentStart: ${screenCls.simpleName}")
-        val fragmentBindersById =
-                getFragmentBindersByIdMap(screenCls, fragmentId)
-
-        fragmentBindersById[fragmentId]?.forEach { binder ->
-            binder.onShow()
-        }
-    }
-
-    fun onFragmentFocus(screenCls: Class<*>, fragmentId: Long) {
-        Log.d(TAG, "     onFragmentFocus: ${screenCls.simpleName}")
-        val fragmentBindersById =
-                getFragmentBindersByIdMap(screenCls, fragmentId)
-
-        fragmentBindersById[fragmentId]?.forEach { binder ->
-            binder.onFocus()
-        }
-    }
-
-    fun onFragmentSelected(screenCls: Class<*>, fragmentId: Long) {
-        Log.d(TAG, "     onFragmentSelected: ${screenCls.simpleName}")
-        val fragmentBindersById =
-                getFragmentBindersByIdMap(screenCls, fragmentId)
-
-        fragmentBindersById[fragmentId]?.forEach { binder ->
-            (binder as FragmentScreenBinder<*>).onSelectedInPager()
-        }
-    }
-
-    fun onFragmentLostFocus(screenCls: Class<*>, fragmentId: Long) {
-        Log.d(TAG, "     onFragmentLostFocus: ${screenCls.simpleName}")
-        val fragmentBindersById =
-                getFragmentBindersByIdMap(screenCls, fragmentId)
-
-        fragmentBindersById[fragmentId]?.forEach { binder ->
-            binder.onLostFocus()
-        }
-    }
-
-    fun onFragmentStop(screenCls: Class<*>, fragmentId: Long) {
-        Log.d(TAG, "     onFragmentStop: ${screenCls.simpleName}")
-        val fragmentBindersById =
-                getFragmentBindersByIdMap(screenCls, fragmentId)
-
-        fragmentBindersById[fragmentId]?.forEach { binder ->
-            binder.onHide()
-        }
-    }
-
-    fun onFragmentCreate(screenCls: Class<*>, fragmentId: Long) {
-        Log.d(TAG, "     onFragmentCreate: ${screenCls.simpleName}")
-        val fragmentBindersById =
-                getFragmentBindersByIdMap(screenCls, fragmentId)
-
-        fragmentBindersById[fragmentId]?.forEach { binder ->
-            binder.onBind()
-        }
-    }
-
-    fun onFragmentDestroy(screenCls: Class<*>, fragmentId: Long) {
-        fragmentBindersByScreenClsMap[screenCls.javaClass]?.clear()
-    }
-
-    private fun getFragmentBindersByIdMap(screenCls: Class<*>, fragmentId: Long): HashMap<Long, List<BaseAndroidScreenBinder>> {
-        if (screenCls.name == "java.lang.Object" && fragmentId <= 0) {
-            throw NullPointerException(createFragmentBindersExceptionData(screenCls, fragmentId) +
-                    "NOTE: try to use  the screensAdapter.createFragment(...) method to create any fragment")
-        }
-        return fragmentBindersByScreenClsMap[screenCls]
-                ?: throw NullPointerException(createFragmentBindersExceptionData(screenCls, fragmentId))
-    }
-
-    private fun createFragmentBindersExceptionData(screenCls: Class<*>, fragmentId: Long): String {
-        return "data:\n" +
-                "[ screenCls = ${screenCls.name} ]\n" +
-                "[ fragmentId = $fragmentId ]\n"
-    }
-
-    // BaseActivity callbacks
-
-    fun onStarterActivityCreated(activity: Activity) {
+    internal fun onStarterActivityCreated(activity: Activity) {
         Handler().postDelayed({
             Log.i(TAG, "show starter!")
             showNextScreen(firstScreenSettings, activity, data = firstData, parent = null)
@@ -213,12 +116,11 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         }, delayForSplashMs)
     }
 
-
     internal fun backToPreviousScreenOrClose() {
         val currentScreenSettings = popScreen()
         Log.i(TAG, "hideCurrentScreen: ${currentScreenSettings.screenCls.simpleName}")
 
-        setHiddenBinders(currentScreenSettings)
+        setHiddenBinders(currentScreenSettings.screenCls)
 
         bindersByScreenClsMap[currentScreenSettings.screenCls] = emptyList()
 
@@ -228,7 +130,51 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         }
     }
 
-// There are available to use from binders:
+    private fun saveScreensAdapterState() {
+        //todo: Save and restore binders, screens and settings and firstData
+        //todo: save all
+    }
+
+    private fun restoreScreensAdapterState() {
+        //todo: restore all
+    }
+
+    private fun setHiddenBinders(screenCls: Class<*>) {
+        hiddenBinders.clear()
+
+        val binders = bindersByScreenClsMap[screenCls]!!
+        hiddenBinders.addAll(binders)
+
+        val childBindersByChildScreenClsMap = childBindersByMainScreenClsMap[getCurrentScreenCls()]
+        childBindersByChildScreenClsMap?.forEach { entry ->
+            val childBinders = entry.value
+            hiddenBinders.addAll(childBinders)
+        }
+    }
+
+    private fun pushScreen(settings: ScreenSettings) {
+        screenSettingsStack.push(settings)
+    }
+
+    private fun popScreen() = screenSettingsStack.pop()
+
+    private fun getCurrentScreenCls() = screenSettingsStack.takeIf { it.size > 0 }
+            ?.peek()?.screenCls
+
+    // NOTE: There are used in generated screens adapter
+
+    protected fun createNotFoundException(name: String) =
+            IllegalStateException("Invalid Screen!!! The \"$name\" screen is not found in the generator.")
+
+    protected  fun restoreScreen(screenName: String): Any? {
+        return screenName.getData()
+    }
+
+    abstract fun generateBinders(screenCls: Class<*>): Collection<BaseAndroidScreenBinder>
+
+    abstract fun generateScreens(mainScreenCls: Class<*>, data: Any?, parent: Any?): Collection<Any>
+
+    // NOTE: There are available to use from binders:
 
     fun getAndroidApp() = androidAppRef.get()
     fun getCurrentActivity() = currentActivityRef.get()
@@ -334,16 +280,16 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
 //        fragmentBindersByScreenClsMap.clear() //todo:
 
         settings.screenCls.name.remove() // remove from shared preferences
-        onBackPressed = null
+        onBackPressedListener = null
 
         if (settings.finishAllPreviousScreens) {
-            setHiddenBinders(getCurrentSettings())
+            setHiddenBinders(getCurrentSettings().screenCls)
             screenSettingsStack.clear()
         }
 
         val screens = generateScreens(settings.screenCls, data, parent)
-//        screensByMainScreenClsMap.clear() //todo:
-        screensByMainScreenClsMap[settings.screenCls] = screens
+//        supportScreensByMainScreenClsMap.clear() //todo:
+        supportScreensByMainScreenClsMap[settings.screenCls] = screens
 
 //        bindersByScreenClsMap.clear() //todo:
         screens.forEach { screen ->
@@ -356,8 +302,8 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         var prevSettings: ScreenSettings? = null
         if (screenSettingsStack.isNotEmpty()) {
             prevSettings = screenSettingsStack.peek()
-            setHiddenBinders(prevSettings)
 
+            setHiddenBinders(prevSettings.screenCls)
 
             if (prevSettings.finishOnNextScreen || settings.finishPreviousScreen) {
                 popScreen()
@@ -371,50 +317,10 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         saveScreensAdapterState()
     }
 
-    private fun saveScreensAdapterState() {
-        //todo: Save and restore binders, screens and settings and firstData
-        //todo: save all
-    }
-
-    private fun restoreScreensAdapterState() {
-        //todo: restore all
-    }
-
-    private fun setHiddenBinders(currentScreenSettings: ScreenSettings) {
-        val screenCls = currentScreenSettings.screenCls
-        hiddenBinders.clear()
-
-        val binders = bindersByScreenClsMap[screenCls]!!
-        hiddenBinders.addAll(binders)
-
-        val childBindersByChildScreenClsMap
-                = childBindersByMainScreenClsMap[getCurrentScreenCls()]
-        childBindersByChildScreenClsMap?.forEach { entry ->
-            val childBinders = entry.value
-            hiddenBinders.addAll(childBinders)
-        }
-    }
-
-    private fun pushScreen(settings: ScreenSettings) {
-        screenSettingsStack.push(settings)
-    }
-
-    private fun popScreen() = screenSettingsStack.pop()
-
-    fun hideCurrentScreen() = backToPreviousScreenOrClose()
-
-    fun getCurrentScreen(): Any {
-        val screenCls = getCurrentScreenCls()
-        return screensByMainScreenClsMap[screenCls]?.first()
-                ?: throw NullPointerException("Screen must be not null!")
-    }
-
-    private fun getCurrentScreenCls() = screenSettingsStack.takeIf { it.size > 0 }
-            ?.peek()?.screenCls
-
-    fun getScreensByMainScreen(mainScreenCls: Class<*>): Collection<Any> {
-        return screensByMainScreenClsMap[mainScreenCls]
-                ?: throw NullPointerException("Init supportScreens for settings before use")
+    fun resetToFirstScreen(data: Any? = firstData) {
+        val firstScreenSettings = screenSettingsStack.last()
+        firstScreenSettings.finishAllPreviousScreens = true
+        showNextScreen(firstScreenSettings, data = data, parent = null)
     }
 
     fun start() {
@@ -424,18 +330,10 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         DATA.LAUNCH_NUMBER.putData(launchNumber + 1)
     }
 
-    fun resetToFirstScreen(data: Any? = firstData) {
-        val firstScreenSettings = screenSettingsStack.last()
-        firstScreenSettings.finishAllPreviousScreens = true
-        showNextScreen(firstScreenSettings, data = data, parent = null)
-    }
-
-    fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return onOptionsItemSelected?.invoke(item) ?: false
-    }
-
-    fun onPrepareOptionsMenu(menu: Menu?): Boolean {
-        return onPrepareOptionsMenu?.invoke(menu) ?: true
+    fun getCurrentScreen(): Any {
+        val screenCls = getCurrentScreenCls()
+        return supportScreensByMainScreenClsMap[screenCls]?.first()
+                ?: throw NullPointerException("Screen must be not null!")
     }
 
     fun getCurrentSettings(): ScreenSettings {
@@ -445,4 +343,6 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
 
         return screenSettingsStack.peek()
     }
+
+    fun hideCurrentScreen() = backToPreviousScreenOrClose()
 }

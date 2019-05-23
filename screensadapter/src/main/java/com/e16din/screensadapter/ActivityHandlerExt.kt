@@ -2,12 +2,16 @@ package com.e16din.screensadapter
 
 import android.content.Intent
 import android.util.Log
+import android.view.Menu
+import android.view.MenuItem
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.binders.android.BaseAndroidScreenBinder
 import java.lang.ref.WeakReference
 
 
 private const val TAG = "SA.ActivityHandler"
+
+private var isScreenShown = false
 
 fun ScreensAdapter<*, *>.onActivityCreateBeforeSuperCalled(activity: BaseActivity, screenCls: Class<*>) {
     Log.d(TAG, "onActivityCreateBeforeSuperCalled: ${screenCls.simpleName}")
@@ -143,8 +147,8 @@ fun ScreensAdapter<*, *>.onRequestPermissionsResult(requestCode: Int, permission
 fun ScreensAdapter<*, *>.onBackPressed() {
     Log.w(TAG, "screenSettingsStack: $screenSettingsStack")
 
-    if (onBackPressed != null) {
-        onBackPressed?.invoke()
+    if (onBackPressedListener != null) {
+        onBackPressedListener?.invoke()
         return
     }
     if (screenSettingsStack.isNotEmpty()) {
@@ -152,12 +156,20 @@ fun ScreensAdapter<*, *>.onBackPressed() {
     }
 }
 
+fun ScreensAdapter<*, *>.onOptionsItemSelected(item: MenuItem): Boolean {
+    return onOptionsItemSelectedListener?.invoke(item) ?: false
+}
+
+fun ScreensAdapter<*, *>.onPrepareOptionsMenu(menu: Menu?): Boolean {
+    return onPrepareOptionsMenuListener?.invoke(menu) ?: true
+}
+
 private fun ScreensAdapter<*, *>.getCurrentBindersByMainScreen(mainScreenCls: Class<*>): Collection<BaseAndroidScreenBinder> {
     if (screenSettingsStack.isEmpty()) {
         return emptyList()
     }
 
-    val screens = getScreensByMainScreen(mainScreenCls)
+    val screens = getSupportScreensByMainScreen(mainScreenCls)
     val allBinders = ArrayList<BaseAndroidScreenBinder>()
     screens.forEach { screen ->
         val bindersForScreen = getBindersByScreen(screen.javaClass)
@@ -177,4 +189,14 @@ private fun ScreensAdapter<*, *>.getCurrentBindersByMainScreen(mainScreenCls: Cl
     }
 
     return allBinders
+}
+
+private fun ScreensAdapter<*, *>.getSupportScreensByMainScreen(mainScreenCls: Class<*>): Collection<Any> {
+    return supportScreensByMainScreenClsMap[mainScreenCls]
+            ?: throw NullPointerException("Init supportScreens before use")
+}
+
+private fun ScreensAdapter<*, *>.getBindersByScreen(screenCls: Class<*>): Collection<BaseAndroidScreenBinder> {
+    return bindersByScreenClsMap[screenCls]
+            ?: throw NullPointerException("screenCls:${screenCls.simpleName} | Array of binders must not be null!")
 }
