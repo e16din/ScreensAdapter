@@ -37,7 +37,7 @@ class BaseFragment : Fragment() {
     private val screensAdapter: ScreensAdapter<*, *>?
         get() = (activity?.application as ScreensAdapterApplication?)?.screensAdapter
 
-    private lateinit var screenCls: Class<*>
+    lateinit var screenCls: Class<*>
 
     var fragmentId: Long = -1
 

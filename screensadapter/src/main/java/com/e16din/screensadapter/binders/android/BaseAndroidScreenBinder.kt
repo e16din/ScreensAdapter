@@ -50,9 +50,9 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
 
     override fun getColor(id: Int) = ContextCompat.getColor(activity, id)
 
-    override fun hideScreen(resultCode: Int) {
+    override fun hideScreen() {
         Log.d("ScreensAdapter", "hideScreen()")
-        screensAdapter.hideCurrentScreen(resultCode)
+        screensAdapter.hideCurrentScreen()
     }
 
     override fun onHide() {

@@ -2,6 +2,6 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
-        android:drawable="@android:color/holo_green_dark"/>
+        android:drawable="@android:color/white"/>
 
 </layer-list>

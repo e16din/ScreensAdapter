@@ -125,10 +125,15 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
         binderElements.forEach { element ->
             val annotation = element.getAnnotation(Screen::class.java)
-            val dataTypeName = try {
+            var dataTypeName = try {
                 annotation.data.qualifiedName
             } catch (e: MirroredTypeException) {
                 e.typeMirror.toString()
+            }
+
+            val isDataNullable = annotation.isDataNullable
+            if (isDataNullable) {
+                dataTypeName = "$dataTypeName?"
             }
 
             val parentTypeName = try {
