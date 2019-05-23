@@ -6,8 +6,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import com.e16din.screensadapter.ScreensAdapter
-import com.e16din.screensadapter.ScreensAdapterApplication
+import com.e16din.screensadapter.*
 import com.e16din.screensadapter.settings.ScreenSettings
 
 abstract class BaseActivity : AppCompatActivity() {
