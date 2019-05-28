@@ -5,7 +5,7 @@ import androidx.fragment.app.Fragment
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.fragments.BaseFragment
 
-abstract class FragmentScreenBinder<SCREEN>(adapter: ScreensAdapter<*, *>) :
+abstract class FragmentScreenBinder<SCREEN : Any>(adapter: ScreensAdapter<*, *>) :
         ScreenBinder<SCREEN>(adapter) {
 
     var fragmentId: Long = -2
@@ -18,7 +18,11 @@ abstract class FragmentScreenBinder<SCREEN>(adapter: ScreensAdapter<*, *>) :
                 ?: throw NullPointerException("Fragment must be not null!")
 
     fun findCurrentFragment(fragments: List<Fragment>): BaseFragment? {
-        return getAllFragments(fragments).find { it is BaseFragment && it.fragmentId == fragmentId } as BaseFragment?
+        val allFragments = getAllFragments(fragments)
+        val currentFragment = allFragments.find {
+            it is BaseFragment && it.fragmentId == fragmentId
+        }
+        return currentFragment as BaseFragment?
     }
 
     fun findCurrentFragment(): BaseFragment? {

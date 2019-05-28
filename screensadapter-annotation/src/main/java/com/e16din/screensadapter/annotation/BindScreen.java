@@ -9,10 +9,4 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.SOURCE)
 public @interface BindScreen {
     Class screen();
-
-    Class[] supportScreens() default {}; //todo: удалить это
-
-    Class startAfter() default Object.class;
-
-    Class startBefore() default Object.class;
 }

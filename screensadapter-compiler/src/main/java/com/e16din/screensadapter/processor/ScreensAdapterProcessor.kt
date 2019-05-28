@@ -1,14 +1,11 @@
 package com.e16din.screensadapter.processor
 
-import com.e16din.screensadapter.annotation.AddSupportBinder
-import com.e16din.screensadapter.annotation.BindChildScreen
 import com.e16din.screensadapter.annotation.BindScreen
 import com.e16din.screensadapter.annotation.model.App
 import com.e16din.screensadapter.annotation.model.Screen
 import com.e16din.screensadapter.annotation.model.Server
 import com.e16din.screensadapter.processor.ScreensAdapterProcessor.Companion.KAPT_KOTLIN_GENERATED_OPTION_NAME
 import com.squareup.kotlinpoet.*
-import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.plusParameter
 import java.io.File
 import javax.annotation.processing.*
 import javax.lang.model.SourceVersion
@@ -36,7 +33,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         private val CLS_ANDROID_APPLICATION =
                 ClassName("android.app", "Application")
         private val CLS_BASE_ANDROID_SCREEN_BINDER =
-                ClassName("com.e16din.screensadapter.binders.android", "BaseAndroidScreenBinder")
+                ClassName("com.e16din.screensadapter.binders", "IScreenBinder")
     }
 
     private lateinit var filer: Filer
@@ -47,11 +44,15 @@ class ScreensAdapterProcessor : AbstractProcessor() {
     private var appClassName: String? = null
     private var serverClassName: String? = null
 
-    private var screensByMainScreenMap = HashMap<String, ArrayList<String>>()
-    private var screensByBinderMap = HashMap<String, List<String>>()
-
-    private var screenDataTypeByMainScreenMap = HashMap<String, String>()
-    private var screenParentTypeByMainScreenMap = HashMap<String, String>()
+    private var screens = arrayListOf<String>()
+    // NOTE: Binder -> Screen
+    private var screenByBinderMap = hashMapOf<String, String>()
+    // NOTE: Screen -> Binder
+    private var binderByScreenMap = hashMapOf<String, String>()
+    // NOTE: Screen -> DataType
+    private var screenDataTypeByScreenMap = hashMapOf<String, String>()
+    // NOTE: Screen -> ParentType
+    private var screenParentTypeByScreenMap = hashMapOf<String, String>()
 
     override fun getSupportedSourceVersion(): SourceVersion {
         return SourceVersion.latestSupported()
@@ -63,7 +64,6 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         annotations.add(Server::class.java.canonicalName)
         annotations.add(Screen::class.java.canonicalName)
         annotations.add(BindScreen::class.java.canonicalName)
-        annotations.add(AddSupportBinder::class.java.canonicalName)
 
         return annotations
     }
@@ -86,13 +86,11 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         processServer(roundEnv)
         processScreens(roundEnv)
         processBinders(roundEnv)
-        processChildBinders(roundEnv)
-        processSupportBinders(roundEnv)
 
         if (appClassName != null
                 && serverClassName != null) {
 
-            generateScreensAdapter(SCREENS_ADAPTER_PACKAGE)
+            makeScreenAdapter(SCREENS_ADAPTER_PACKAGE)
             generated = true
             return true
         }
@@ -143,8 +141,8 @@ class ScreensAdapterProcessor : AbstractProcessor() {
             }
 
             val screenName = element.getFullName()
-            screenDataTypeByMainScreenMap[screenName] = dataTypeName!!
-            screenParentTypeByMainScreenMap[screenName] = parentTypeName!!
+            screenDataTypeByScreenMap[screenName] = dataTypeName!!
+            screenParentTypeByScreenMap[screenName] = parentTypeName!!
         }
     }
 
@@ -158,112 +156,26 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                 element.getAnnotation(BindScreen::class.java).screen.qualifiedName
             } catch (e: MirroredTypeException) {
                 e.typeMirror.toString()
-            }
-
-            val annotationMirror = element.annotationMirrors.first()
-            val mirrorAsStr = annotationMirror.toString()
-            mirrorAsStr.print()
-            val supportScreens = mirrorAsStr.substringBetween("supportScreens={", "}")
-                    ?.split(", ")
-                    ?.map { screenCls ->
-                        screenCls.replace(".class", "")
-                    }
-            "supportScreens: ".print()
-            supportScreens.toString().print()
-
-            val screensForBinder = arrayListOf(screenName!!)
-            supportScreens?.let {
-                screensForBinder.addAll(it)
-            }
-            screensByMainScreenMap[screenName] = screensForBinder
-
-            if (!isObjectClass(screenName)) {
-                val binderName = element.getFullName()
-                screensByBinderMap[binderName] = screensForBinder
-            }
-        }
-        screensByBinderMap.forEach { binderName, screensNames ->
-            "$binderName: $screensNames".print()
-        }
-    }
-
-    private fun processChildBinders(roundEnv: RoundEnvironment) {
-        ">> processChildBinders:".print()
-        val binderElements =
-                roundEnv.getElementsAnnotatedWith(BindChildScreen::class.java)
-
-        binderElements.forEach { element ->
-            val screenName = try {
-                element.getAnnotation(BindChildScreen::class.java).screen.qualifiedName
-            } catch (e: MirroredTypeException) {
-                e.typeMirror.toString()
-            }
-
-            val parentScreenName = try {
-                element.getAnnotation(BindChildScreen::class.java).parentScreen.qualifiedName
-            } catch (e: MirroredTypeException) {
-                e.typeMirror.toString()
-            }
-
-            val annotationMirror = element.annotationMirrors.first()
-            val mirrorAsStr = annotationMirror.toString()
-            mirrorAsStr.print()
-
-            screensByMainScreenMap[parentScreenName]?.add(screenName!!)
-
-            if (!isObjectClass(screenName)) {
-                val binderName = element.getFullName()
-                screensByBinderMap[binderName] = listOf(screenName!!)
-            }
-        }
-        screensByBinderMap.forEach { binderName, screensNames ->
-            "$binderName: $screensNames".print()
-        }
-    }
-
-    private fun processSupportBinders(roundEnv: RoundEnvironment) {
-        "processSupportBinders:".print()
-        val addSupportBinderElements =
-                roundEnv.getElementsAnnotatedWith(AddSupportBinder::class.java)
-
-        addSupportBinderElements.forEach { element ->
-            val binderName = element.getFullName()
-            val annotationMirror = element.annotationMirrors.first()
-            annotationMirror.toString().print()
-            //Note: @com.e16din.screensadapter.annotation.BindScreens(screens={com.e16din.screensadapter.sample.screens.main.MainMapScreen.class, com.e16din.screensadapter.sample.screens.main.MainScreen.class})
-            val screensClasses = arrayListOf<String>()
-
-            val screensForBind = annotationMirror.toString()
-                    .substringBetween("{", "}")
-                    ?.split(", ")
-                    ?.map { className ->
-                        className.replace(".class", "")
-                    } ?: arrayListOf()
-            screensClasses.addAll(screensForBind)
-
-            val screenForBindName = try {
-                element.getAnnotation(AddSupportBinder::class.java).screen.qualifiedName
-            } catch (e: MirroredTypeException) {
-                e.typeMirror.toString()
             }!!
-            if (!isObjectClass(screenForBindName)) {
-                screensClasses.add(screenForBindName)
-            }
 
-            screensByBinderMap[binderName] = screensClasses
+            val annotationMirror = element.annotationMirrors.first()
+            val mirrorAsStr = annotationMirror.toString()
+            mirrorAsStr.print()
 
-            screensClasses.forEach { screenName ->
-                if (screensByMainScreenMap[screenName] == null) {
-                    screensByMainScreenMap[screenName] = arrayListOf(screenName)
-                }
+            screens.add(screenName)
+
+            if (!isObjectClass(screenName)) {
+                val binderName = element.getFullName()
+                screenByBinderMap[binderName] = screenName
+                binderByScreenMap[screenName] = binderName
             }
         }
-        screensByBinderMap.forEach { binderName, screensNames ->
+        screenByBinderMap.forEach { binderName, screensNames ->
             "$binderName: $screensNames".print()
         }
     }
 
-    fun isObjectClass(className: String?): Boolean {
+    private fun isObjectClass(className: String?): Boolean {
         return className!!.endsWith(".Object.class")
                 || className.endsWith(".Object::class")
                 || className.endsWith(".Object::class.java")
@@ -273,7 +185,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
     private fun Element.getFullName() =
             "${processingEnv.elementUtils.getPackageOf(this)}.${this.simpleName}"
 
-    private fun generateScreensAdapter(pkg: String) {
+    private fun makeScreenAdapter(pkg: String) {
         val fileName = "GeneratedScreensAdapter"
 
         val generatedSourcesRoot = processingEnv.options[KAPT_KOTLIN_GENERATED_OPTION_NAME]
@@ -305,21 +217,15 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
         var bindersObjectsCode = ""
 
-        screensByMainScreenMap.keys.forEach { mainScreenName ->
-            val bindersForScreen = screensByBinderMap.keys.filter { binderName ->
-                screensByBinderMap[binderName]!!.any { screenName ->
-                    screenName == mainScreenName
-                }
-            }
+        screens.forEach { screenName ->
+            val binderName = binderByScreenMap[screenName]
 
-            bindersObjectsCode += "$PADDING_2$mainScreenName::class.java -> arrayListOf(\n" +
-                    bindersForScreen.joinToString(separator = ",\n") { binderName ->
-                        "$PADDING_3$binderName(this)"
-                    } +
-                    "\n$PADDING_2)\n"
+            bindersObjectsCode += "$PADDING_2$screenName::class.java -> " +
+                    "$PADDING_3$binderName(this)" +
+                    "\n$PADDING_2\n"
         }
 
-        val funcSpec = FunSpec.builder("generateBinders")
+        val funcSpec = FunSpec.builder("makeBinder")
                 .addModifiers(KModifier.OVERRIDE)
                 .addParameter(screenClsParamName, ClassName.bestGuess("Class<*>"))
                 .addStatement(
@@ -327,54 +233,50 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                                 bindersObjectsCode +
                                 "${PADDING_2}else -> throw createNotFoundException($screenClsParamName.simpleName)\n" +
                                 "$PADDING_1}")
-                .returns(ClassName.bestGuess("Collection").plusParameter(CLS_BASE_ANDROID_SCREEN_BINDER))
+                .returns(CLS_BASE_ANDROID_SCREEN_BINDER)
                 .build()
 
         return this.addFunction(funcSpec)
     }
 
     private fun (TypeSpec.Builder).addGeneratedScreensFunc(): TypeSpec.Builder {
-        val mainScreenClsParamName = "mainScreenCls"
+        val screenClsParamName = "screenCls"
         val dataParamName = "data"
         val parentParamName = "parent"
 
 
-        var mainScreensObjectsCode = ""
-        screensByMainScreenMap.keys.forEach { mainScreenName ->
-            var dataType = screenDataTypeByMainScreenMap[mainScreenName]
+        var screensObjectsCode = ""
+        screens.forEach { screenName ->
+
+            var dataType = screenDataTypeByScreenMap[screenName]
             dataType = normalizeType(dataType)
+            val data = if (dataType.equals("java.lang.Object"))
+                dataParamName
+            else
+                "$dataParamName as $dataType"
 
-            val parentType = screenParentTypeByMainScreenMap[mainScreenName]
+            val parentType = screenParentTypeByScreenMap[screenName]
+            val parent = if (parentType.equals("java.lang.Object"))
+                parentParamName
+            else
+                "$parentParamName as $parentType"
 
-            mainScreensObjectsCode += "$PADDING_2$mainScreenName::class.java -> arrayListOf(\n" +
-                    screensByMainScreenMap[mainScreenName]
-                            ?.joinToString(separator = ",\n") { screenName ->
-                                val data = if (dataType.equals("java.lang.Object"))
-                                    dataParamName
-                                else
-                                    "$dataParamName as $dataType"
-
-                                val parent = if (parentType.equals("java.lang.Object"))
-                                    parentParamName
-                                else
-                                    "$parentParamName as $parentType"
-
-                                "restoreScreen(\"$screenName\") ?: $PADDING_3$screenName($data, $parent)"
-                            } +
-                    "$PADDING_2)\n"
+            screensObjectsCode += "$PADDING_2$screenName::class.java -> \n" +
+                    "restoreScreen(\"$screenName\") ?: $PADDING_3$screenName($data, $parent)" +
+                    "$PADDING_2\n"
         }
 
-        val funcSpec = FunSpec.builder("generateScreens")
+        val funcSpec = FunSpec.builder("makeScreen")
                 .addModifiers(KModifier.OVERRIDE)
-                .addParameter(mainScreenClsParamName, ClassName.bestGuess("Class<*>"))
+                .addParameter(screenClsParamName, ClassName.bestGuess("Class<*>"))
                 .addParameter(dataParamName, ClassName.bestGuess("Any?"))
                 .addParameter(parentParamName, ClassName.bestGuess("Any?"))
                 .addStatement(
-                        "${PADDING_1}return when ($mainScreenClsParamName) {\n" +
-                                mainScreensObjectsCode +
-                                "${PADDING_2}else -> throw createNotFoundException($mainScreenClsParamName.simpleName)\n" +
+                        "${PADDING_1}return when ($screenClsParamName) {\n" +
+                                screensObjectsCode +
+                                "${PADDING_2}else -> throw createNotFoundException($screenClsParamName.simpleName)\n" +
                                 "$PADDING_1}")
-                .returns(ClassName.bestGuess("Collection<Any>"))
+                .returns(ClassName.bestGuess("Any"))
                 .build()
 
         return this.addFunction(funcSpec)
@@ -438,7 +340,7 @@ private fun String.substringBetween(start: String, end: String): String? {
 //        delayForSplashMs: Long,
 //        splashTheme: Int
 //) : ScreensAdapter<com.e16din.purchases.app.PurchasesAppAgent, com.e16din.purchases.server.PurchasesServerAgent>(androidApp, app, server, delayForSplashMs, splashTheme) {
-//    override fun generateScreens(mainScreenCls: Class<*>, data:Any?): Collection<Any> {
+//    override fun makeScreen(mainScreenCls: Class<*>, data:Any?): Collection<Any> {
 //        return when (mainScreenCls) {
 //            com.e16din.purchases.screens.main.MainScreen::class.java -> arrayListOf(
 //                    "MainScreen".getData<MainScreen>() ?: com.e16din.purchases.screens.main.MainScreen(data)
@@ -449,7 +351,7 @@ private fun String.substringBetween(start: String, end: String): String? {
 //        }
 //    }
 //
-//    override fun generateBinders(screenCls: Class<*>): Collection<BaseScreenBinder> {
+//    override fun makeBinder(screenCls: Class<*>): Collection<BaseScreenBinder> {
 //        return when (screenCls) {
 //            com.e16din.purchases.screens.main.MainScreen::class.java -> arrayListOf(
 //                    com.e16din.purchases.screens.main.MainBinder(this)

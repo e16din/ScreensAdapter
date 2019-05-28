@@ -12,10 +12,10 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.e16din.screensadapter.binders.android.BaseAndroidScreenBinder
 
-fun BaseAndroidScreenBinder.showToastMessage(message: CharSequence) =
+fun BaseAndroidScreenBinder<*>.showToastMessage(message: CharSequence) =
         Toast.makeText(this.screensAdapter.getAndroidApp(), message, Toast.LENGTH_SHORT).show()
 
-fun BaseAndroidScreenBinder.showToastMessageLong(message: CharSequence?) =
+fun BaseAndroidScreenBinder<*>.showToastMessageLong(message: CharSequence?) =
         Toast.makeText(this.screensAdapter.getAndroidApp(), message, Toast.LENGTH_LONG).show()
 
 fun Int.getDrawable(context: Context): Drawable? {

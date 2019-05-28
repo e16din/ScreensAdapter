@@ -1,87 +1,60 @@
 package com.e16din.screensadapter
 
 import android.util.Log
-import com.e16din.screensadapter.binders.android.BaseAndroidScreenBinder
 import com.e16din.screensadapter.binders.android.FragmentScreenBinder
 
 
 private const val TAG = "SA.FragmentHandler"
 
-fun ScreensAdapter<*, *>.onFragmentStart(screenCls: Class<*>, fragmentId: Long) {
-    Log.d(TAG, "     onFragmentStart: ${screenCls.simpleName}")
-    val fragmentBindersById =
-            getFragmentBindersByIdMap(screenCls, fragmentId)
-
-    fragmentBindersById[fragmentId]?.forEach { binder ->
-        binder.onShow()
-    }
+fun ScreensAdapter<*, *>.onFragmentStart(fragmentScreenCls: Class<*>, fragmentId: Long) {
+    val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
+    Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentStart() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
+    binder.counter += 1
+    binder.onShow(binder.counter)
 }
 
-fun ScreensAdapter<*, *>.onFragmentFocus(screenCls: Class<*>, fragmentId: Long) {
-    Log.d(TAG, "     onFragmentFocus: ${screenCls.simpleName}")
-    val fragmentBindersById =
-            getFragmentBindersByIdMap(screenCls, fragmentId)
-
-    fragmentBindersById[fragmentId]?.forEach { binder ->
-        binder.onFocus()
-    }
+fun ScreensAdapter<*, *>.onFragmentFocus(fragmentScreenCls: Class<*>, fragmentId: Long) {
+    val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
+    Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentFocus() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
+    binder.onFocus(binder.counter)
 }
 
-fun ScreensAdapter<*, *>.onFragmentSelected(screenCls: Class<*>, fragmentId: Long) {
-    Log.d(TAG, "     onFragmentSelected: ${screenCls.simpleName}")
-    val fragmentBindersById =
-            getFragmentBindersByIdMap(screenCls, fragmentId)
-
-    fragmentBindersById[fragmentId]?.forEach { binder ->
-        (binder as FragmentScreenBinder<*>).onSelectedInPager()
-    }
+fun ScreensAdapter<*, *>.onFragmentSelected(fragmentScreenCls: Class<*>, fragmentId: Long) {
+    val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
+    Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentSelected() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
+    binder.onSelectedInPager()
 }
 
-fun ScreensAdapter<*, *>.onFragmentLostFocus(screenCls: Class<*>, fragmentId: Long) {
-    Log.d(TAG, "     onFragmentLostFocus: ${screenCls.simpleName}")
-    val fragmentBindersById =
-            getFragmentBindersByIdMap(screenCls, fragmentId)
-
-    fragmentBindersById[fragmentId]?.forEach { binder ->
-        binder.onLostFocus()
-    }
+fun ScreensAdapter<*, *>.onFragmentLostFocus(fragmentScreenCls: Class<*>, fragmentId: Long) {
+    val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
+    Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentLostFocus() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
+    binder.onLostFocus(binder.counter)
 }
 
-fun ScreensAdapter<*, *>.onFragmentStop(screenCls: Class<*>, fragmentId: Long) {
-    Log.d(TAG, "     onFragmentStop: ${screenCls.simpleName}")
-    val fragmentBindersById =
-            getFragmentBindersByIdMap(screenCls, fragmentId)
+fun ScreensAdapter<*, *>.onFragmentStop(fragmentScreenCls: Class<*>, fragmentId: Long) {
+    val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
 
-    fragmentBindersById[fragmentId]?.forEach { binder ->
-        binder.onHide()
-    }
+    Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentStop() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
+    binder.onHide(binder.counter)
 }
 
-fun ScreensAdapter<*, *>.onFragmentCreate(screenCls: Class<*>, fragmentId: Long) {
-    Log.d(TAG, "     onFragmentCreate: ${screenCls.simpleName}")
-    val fragmentBindersById =
-            getFragmentBindersByIdMap(screenCls, fragmentId)
-
-    fragmentBindersById[fragmentId]?.forEach { binder ->
-        binder.onBind()
-    }
+fun ScreensAdapter<*, *>.onFragmentCreate(fragmentScreenCls: Class<*>, fragmentId: Long) {
+    val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
+    Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentCreate() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
+    binder.onBind()
 }
 
-fun ScreensAdapter<*, *>.onFragmentDestroy(screenCls: Class<*>, fragmentId: Long) {
-    fragmentBindersByScreenClsMap[screenCls.javaClass]?.clear()
-}
-
-private fun ScreensAdapter<*, *>.getFragmentBindersByIdMap(screenCls: Class<*>, fragmentId: Long): MutableMap<Long, List<BaseAndroidScreenBinder>> {
-    if (screenCls.name == "java.lang.Object" && fragmentId <= 0) {
-        throw NullPointerException(createFragmentBindersExceptionData(screenCls, fragmentId) +
+private fun ScreensAdapter<*, *>.getFragmentBinderByIdMap(fragmentScreenCls: Class<*>, fragmentId: Long): FragmentScreenBinder<*> {
+    if (fragmentScreenCls.name == "java.lang.Object" && fragmentId <= 0) {
+        throw NullPointerException(createFragmentBindersExceptionData(fragmentScreenCls, fragmentId) +
                 "NOTE: try to use  the screensAdapter.createFragment(...) method to create any fragment")
     }
-    return fragmentBindersByScreenClsMap[screenCls]
-            ?: throw NullPointerException(createFragmentBindersExceptionData(screenCls, fragmentId))
+    return fragmentBindersMap[fragmentId]?.second as FragmentScreenBinder<*>?
+            ?: throw NullPointerException(createFragmentBindersExceptionData(fragmentScreenCls, fragmentId))
 }
 
-private fun createFragmentBindersExceptionData(screenCls: Class<*>, fragmentId: Long): String {
+private fun createFragmentBindersExceptionData(fragmentScreenCls: Class<*>, fragmentId: Long): String {
     return "data:\n" +
-            "[ screenCls = ${screenCls.name} ]\n" +
+            "[ fragmentScreenCls = ${fragmentScreenCls.name} ]\n" +
             "[ fragmentId = $fragmentId ]\n"
 }

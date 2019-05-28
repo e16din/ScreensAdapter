@@ -44,6 +44,7 @@ abstract class BaseActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         screensAdapter.onActivityStart(this, settings.screenCls)
+
     }
 
     override fun onResume() {
@@ -57,7 +58,7 @@ abstract class BaseActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
-        screensAdapter.onActivityStop(this, settings.screenCls)
+        screensAdapter.onActivityStopAfterTransition(this, settings.screenCls)
         super.onStop()
     }
 

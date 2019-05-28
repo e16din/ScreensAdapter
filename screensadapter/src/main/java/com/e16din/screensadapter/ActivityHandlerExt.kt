@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import com.e16din.screensadapter.activities.BaseActivity
+import com.e16din.screensadapter.binders.IScreenBinder
 import com.e16din.screensadapter.binders.android.BaseAndroidScreenBinder
 import java.lang.ref.WeakReference
 
@@ -13,97 +14,91 @@ private const val TAG = "SA.ActivityHandler"
 
 private var isScreenShown = false
 
-fun ScreensAdapter<*, *>.onActivityCreateBeforeSuperCalled(activity: BaseActivity, screenCls: Class<*>) {
-    Log.d(TAG, "onActivityCreateBeforeSuperCalled: ${screenCls.simpleName}")
+fun ScreensAdapter<*, *>.onActivityCreateBeforeSuperCalled(activity: BaseActivity, mainScreenCls: Class<*>) {
+    Log.d(TAG, "${mainScreenCls.simpleName}.onActivityCreateBeforeSuperCalled()")
 
     currentActivityRef = WeakReference(activity)
-    val binders = getCurrentBindersByMainScreen(screenCls)
-    binders.forEach { binder ->
-        binder.onPrepare()
-    }
+    val binder = mainBindersMap[mainScreenCls]
+    binder!!.onPrepare()
 
-    callForAllChildBinders(screenCls) { binder ->
-        binder.onPrepare()
+    callForActualChildBinders(mainScreenCls) { childBinder ->
+        Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityCreateBeforeSuperCalled()")
+        childBinder.onPrepare()
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityCreated(activity: BaseActivity, screenCls: Class<*>) {
-    Log.d(TAG, "onActivityCreated: ${screenCls.simpleName}")
+fun ScreensAdapter<*, *>.onActivityCreated(activity: BaseActivity, mainScreenCls: Class<*>) {
+    Log.d(TAG, "${mainScreenCls.simpleName}.onActivityCreated()")
 
     currentActivityRef = WeakReference(activity)
-    val binders = getCurrentBindersByMainScreen(screenCls)
-    binders.forEach { binder ->
-        binder.onBind()
-    }
+    val binder = mainBindersMap[mainScreenCls]
+    binder!!.onBind()
 
-    callForAllChildBinders(screenCls) { binder ->
-        binder.onBind()
+    callForActualChildBinders(mainScreenCls) { childBinder ->
+        Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityCreated()")
+        childBinder.onBind()
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityStart(activity: BaseActivity, screenCls: Class<*>) {
-    Log.d(TAG, "onActivityStart: ${screenCls.simpleName}")
+fun ScreensAdapter<*, *>.onActivityStart(activity: BaseActivity, mainScreenCls: Class<*>) {
+    Log.d(TAG, "${mainScreenCls.simpleName}.onActivityStart()")
     isScreenShown = true
     currentActivityRef = WeakReference(activity)
 
-    val binders = getBindersByScreen(screenCls)
-    binders.forEach { binder ->
-        binder.onShow()
-    }
+    val binder = mainBindersMap[mainScreenCls]
+    binder!!.counter += 1
+    binder!!.onShow(binder.counter)
 
-    callForAllChildBinders(screenCls) { binder ->
-        binder.onShow()
-    }
-}
-
-private fun ScreensAdapter<*, *>.callForAllChildBinders(currentScreenCls: Class<*>, call: (BaseAndroidScreenBinder) -> Unit) {
-    val childBindersByChildScreenClsMap = childBindersByMainScreenClsMap[currentScreenCls]
-    childBindersByChildScreenClsMap?.forEach { childBindersEntry ->
-        val childBinders = childBindersEntry.value
-        childBinders.forEach { binder ->
-            call.invoke(binder)
-        }
+    callForActualChildBinders(mainScreenCls) { childBinder ->
+        Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityStart()")
+        childBinder.counter += 1
+        childBinder.onShow(childBinder.counter)
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityResume(screenCls: Class<*>) {
-    Log.d(TAG, "onActivityResume: ${screenCls.simpleName}")
-    val binders = getCurrentBindersByMainScreen(screenCls)
-    binders.forEach { binder ->
-        binder.onFocus()
-    }
+fun ScreensAdapter<*, *>.onActivityResume(mainScreenCls: Class<*>) {
+    Log.d(TAG, "${mainScreenCls.simpleName}.onActivityResume()")
+    val binder = mainBindersMap[mainScreenCls]
+    binder!!.onFocus(binder.counter)
 
-    callForAllChildBinders(screenCls) { binder ->
-        binder.onFocus()
-    }
-}
-
-fun ScreensAdapter<*, *>.onActivityPause(screenCls: Class<*>) {
-    Log.d(TAG, "onActivityPause: ${screenCls.simpleName}")
-    val binders = hiddenBinders.takeIf { hiddenBinders.isNotEmpty() }
-            ?: getCurrentBindersByMainScreen(screenCls)
-    binders.forEach { binder ->
-        binder.onLostFocus()
-    }
-
-    callForAllChildBinders(screenCls) { binder ->
-        binder.onLostFocus()
+    callForActualChildBinders(mainScreenCls) { childBinder ->
+        Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityResume()")
+        childBinder.onFocus(childBinder.counter)
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityStop(activity: BaseActivity, screenCls: Class<*>) {
-    Log.d(TAG, "onActivityStop: ${screenCls.simpleName}")
-    val binders = hiddenBinders.takeIf { hiddenBinders.isNotEmpty() }
-            ?: getCurrentBindersByMainScreen(screenCls)
-    binders.forEach { binder ->
-        binder.onHide()
-    }
+fun ScreensAdapter<*, *>.beforeNextActivityStart(mainScreenCls: Class<*>) {
+    Log.d(TAG, "${mainScreenCls.simpleName}.beforeNextActivityStart()")
+    val binder = mainBindersMap[mainScreenCls]
+    binder!!.onNextScreen()
 
-    callForAllChildBinders(screenCls) { binder ->
-        binder.onHide()
+    callForActualChildBinders(mainScreenCls) { childBinder ->
+        Log.d(TAG, "     ${childBinder.javaClass.simpleName}.beforeNextActivityStart()")
+        childBinder.onNextScreen()
     }
+}
 
-    hiddenBinders.clear()
+fun ScreensAdapter<*, *>.onActivityPause(mainScreenCls: Class<*>) {
+    Log.d(TAG, "${mainScreenCls.simpleName}.onActivityPause()")
+
+    val binder = mainBindersMap[mainScreenCls]
+    binder!!.onLostFocus(binder.counter)
+
+    callForActualChildBinders(mainScreenCls) { childBinder ->
+        Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityPause()")
+        childBinder.onLostFocus(binder.counter)
+    }
+}
+
+fun ScreensAdapter<*, *>.onActivityStopAfterTransition(activity: BaseActivity, mainScreenCls: Class<*>) {
+    Log.d(TAG, "${mainScreenCls.simpleName}.onActivityStopAfterTransition()")
+    val binder = mainBindersMap[mainScreenCls]
+    binder!!.onHide(binder.counter)
+
+    callForActualChildBinders(mainScreenCls) { childBinder ->
+        Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityStopAfterTransition()")
+        childBinder.onHide(binder.counter)
+    }
 
     val isSameActivity = getCurrentActivity()?.equals(activity) == true
     if (isSameActivity) {
@@ -115,88 +110,59 @@ fun ScreensAdapter<*, *>.onActivityStop(activity: BaseActivity, screenCls: Class
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityResult(activity: BaseActivity, requestCode: Int, resultCode: Int, data: Intent?, screenCls: Class<*>) {
-    Log.w(TAG, "onActivityResult: ${screenCls.simpleName} | requestCode = $requestCode | resultCode = $resultCode")
+fun ScreensAdapter<*, *>.onActivityResult(activity: BaseActivity, requestCode: Int, resultCode: Int, data: Intent?, mainScreenCls: Class<*>) {
+    Log.w(TAG, "${mainScreenCls.simpleName}.onActivityResult(requestCode = $requestCode, resultCode = $resultCode)")
 
     isScreenShown = true
     currentActivityRef = WeakReference(activity)
 
-    val binders = getCurrentBindersByMainScreen(screenCls)
-    binders.forEach { binder ->
-        binder.onActivityResult(requestCode, resultCode, data)
-    }
+    val binder = mainBindersMap[mainScreenCls]
+    (binder as BaseAndroidScreenBinder<*>).onActivityResult(requestCode, resultCode, data)
 
-    callForAllChildBinders(screenCls) { binder ->
-        binder.onActivityResult(requestCode, resultCode, data)
+    callForActualChildBinders(mainScreenCls) { childBinder ->
+        Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityResult()")
+        (childBinder as BaseAndroidScreenBinder<*>).onActivityResult(requestCode, resultCode, data)
     }
 }
 
-fun ScreensAdapter<*, *>.onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray, screenCls: Class<*>) {
-    Log.w(TAG, "onRequestPermissionsResult: ${screenCls.simpleName} | requestCode = $requestCode | grantResults = $grantResults")
+fun ScreensAdapter<*, *>.onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray, mainScreenCls: Class<*>) {
+    Log.w(TAG, "${mainScreenCls.simpleName}.onRequestPermissionsResult(requestCode = $requestCode, grantResults = $grantResults)")
 
-    val binders = getCurrentBindersByMainScreen(screenCls)
-    binders.forEach { binder ->
-        binder.onRequestPermissionsResult(requestCode, permissions, grantResults)
-    }
+    val binder = mainBindersMap[mainScreenCls]
+    (binder as BaseAndroidScreenBinder<*>).onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-    callForAllChildBinders(screenCls) { binder ->
-        binder.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    callForActualChildBinders(mainScreenCls) { childBinder ->
+        Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onRequestPermissionsResult()")
+        (childBinder as BaseAndroidScreenBinder<*>).onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 }
 
 fun ScreensAdapter<*, *>.onBackPressed() {
+    Log.d(TAG, "onBackPressed()")
     Log.w(TAG, "screenSettingsStack: $screenSettingsStack")
 
     if (onBackPressedListener != null) {
-        onBackPressedListener?.invoke()
+        onBackPressedListener!!.invoke()
         return
     }
+
     if (screenSettingsStack.isNotEmpty()) {
         backToPreviousScreenOrClose()
     }
 }
 
 fun ScreensAdapter<*, *>.onOptionsItemSelected(item: MenuItem): Boolean {
+    Log.d(TAG, "onOptionsItemSelected(itemId = ${item.itemId})")
     return onOptionsItemSelectedListener?.invoke(item) ?: false
 }
 
 fun ScreensAdapter<*, *>.onPrepareOptionsMenu(menu: Menu?): Boolean {
+    Log.d(TAG, "onPrepareOptionsMenu()")
     return onPrepareOptionsMenuListener?.invoke(menu) ?: true
 }
 
-private fun ScreensAdapter<*, *>.getCurrentBindersByMainScreen(mainScreenCls: Class<*>): Collection<BaseAndroidScreenBinder> {
-    if (screenSettingsStack.isEmpty()) {
-        return emptyList()
+private fun ScreensAdapter<*, *>.callForActualChildBinders(mainScreenCls: Class<*>, call: (IScreenBinder) -> Unit) {
+    childBindersMap[mainScreenCls]!!.forEach { (childScreenCls, childBinder) ->
+        call.invoke(childBinder)
     }
-
-    val screens = getSupportScreensByMainScreen(mainScreenCls)
-    val allBinders = ArrayList<BaseAndroidScreenBinder>()
-    screens.forEach { screen ->
-        val bindersForScreen = getBindersByScreen(screen.javaClass)
-
-        bindersForScreen.forEach { newBinder ->
-            var isUnique = true
-            allBinders.forEach { binder ->
-                if (binder.javaClass == newBinder.javaClass) {
-                    isUnique = false
-                }
-            }
-
-            if (isUnique) {
-                allBinders.add(newBinder)
-            }
-        }
-    }
-
-    return allBinders
-}
-
-private fun ScreensAdapter<*, *>.getSupportScreensByMainScreen(mainScreenCls: Class<*>): Collection<Any> {
-    return supportScreensByMainScreenClsMap[mainScreenCls]
-            ?: throw NullPointerException("Init supportScreens before use")
-}
-
-private fun ScreensAdapter<*, *>.getBindersByScreen(screenCls: Class<*>): Collection<BaseAndroidScreenBinder> {
-    return bindersByScreenClsMap[screenCls]
-            ?: throw NullPointerException("screenCls:${screenCls.simpleName} | Array of binders must not be null!")
 }

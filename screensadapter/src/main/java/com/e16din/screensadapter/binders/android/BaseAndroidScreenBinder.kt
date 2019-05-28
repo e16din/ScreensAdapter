@@ -18,8 +18,8 @@ import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
 
 // Note! Hide supportScreens only through supportScreens screensAdapter.hideCurrentScreen()
-abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
-        BaseCommonScreenBinder(screensAdapter),
+abstract class BaseAndroidScreenBinder<SCREEN : Any>(screensAdapter: ScreensAdapter<*, *>) :
+        BaseCommonScreenBinder<SCREEN>(screensAdapter),
         CoroutineScope,
         BaseScreen.SystemAgent,
         BaseScreen.UserAgent {
@@ -55,7 +55,7 @@ abstract class BaseAndroidScreenBinder(screensAdapter: ScreensAdapter<*, *>) :
         screensAdapter.hideCurrentScreen()
     }
 
-    override fun onHide() {
+    override fun onHide(counter: Int) {
         coroutineContext.cancelChildren()
     }
 

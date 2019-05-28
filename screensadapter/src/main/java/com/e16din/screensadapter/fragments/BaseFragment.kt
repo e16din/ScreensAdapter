@@ -75,11 +75,6 @@ class BaseFragment : Fragment() {
         super.onStop()
     }
 
-    override fun onDestroy() {
-        screensAdapter?.onFragmentDestroy(screenCls, fragmentId)
-        super.onDestroy()
-    }
-
     fun onFragmentSelected() {
         screensAdapter?.onFragmentSelected(screenCls, fragmentId)
     }
