@@ -10,13 +10,13 @@ fun ScreensAdapter<*, *>.onFragmentStart(fragmentScreenCls: Class<*>, fragmentId
     val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
     Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentStart() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
     binder.counter += 1
-    binder.onShow(binder.counter)
+    binder.onShow()
 }
 
 fun ScreensAdapter<*, *>.onFragmentFocus(fragmentScreenCls: Class<*>, fragmentId: Long) {
     val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
     Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentFocus() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
-    binder.onFocus(binder.counter)
+    binder.onFocus()
 }
 
 fun ScreensAdapter<*, *>.onFragmentSelected(fragmentScreenCls: Class<*>, fragmentId: Long) {
@@ -28,14 +28,14 @@ fun ScreensAdapter<*, *>.onFragmentSelected(fragmentScreenCls: Class<*>, fragmen
 fun ScreensAdapter<*, *>.onFragmentLostFocus(fragmentScreenCls: Class<*>, fragmentId: Long) {
     val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
     Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentLostFocus() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
-    binder.onLostFocus(binder.counter)
+    binder.onLostFocus()
 }
 
 fun ScreensAdapter<*, *>.onFragmentStop(fragmentScreenCls: Class<*>, fragmentId: Long) {
     val binder = getFragmentBinderByIdMap(fragmentScreenCls, fragmentId)
 
     Log.d(TAG, "     ${fragmentScreenCls.simpleName}.onFragmentStop() | fragmentId = $fragmentId | binder.fragmentId = ${binder.fragmentId}")
-    binder.onHide(binder.counter)
+    binder.onHide()
 }
 
 fun ScreensAdapter<*, *>.onFragmentCreate(fragmentScreenCls: Class<*>, fragmentId: Long) {

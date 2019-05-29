@@ -11,15 +11,15 @@ interface IScreenBinder {
 
     fun onBind() {}
 
-    fun onShow(counter: Int) {}
+    fun onShow() {}
 
-    fun onFocus(counter: Int) {}
+    fun onFocus() {}
 
     fun onNextScreen() {}
 
-    fun onLostFocus(counter: Int) {}
+    fun onLostFocus() {}
 
-    fun onHide(counter: Int) {}
+    fun onHide() {}
 
     fun initScreen(screen: Any)
 }

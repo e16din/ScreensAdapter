@@ -55,7 +55,7 @@ abstract class BaseAndroidScreenBinder<SCREEN : Any>(screensAdapter: ScreensAdap
         screensAdapter.hideCurrentScreen()
     }
 
-    override fun onHide(counter: Int) {
+    override fun onHide() {
         coroutineContext.cancelChildren()
     }
 

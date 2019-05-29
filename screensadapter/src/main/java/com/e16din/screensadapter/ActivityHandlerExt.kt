@@ -47,23 +47,23 @@ fun ScreensAdapter<*, *>.onActivityStart(activity: BaseActivity, mainScreenCls: 
 
     val binder = mainBindersMap[mainScreenCls]
     binder!!.counter += 1
-    binder!!.onShow(binder.counter)
+    binder!!.onShow()
 
     callForActualChildBinders(mainScreenCls) { childBinder ->
         Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityStart()")
         childBinder.counter += 1
-        childBinder.onShow(childBinder.counter)
+        childBinder.onShow()
     }
 }
 
 fun ScreensAdapter<*, *>.onActivityResume(mainScreenCls: Class<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.onActivityResume()")
     val binder = mainBindersMap[mainScreenCls]
-    binder!!.onFocus(binder.counter)
+    binder!!.onFocus()
 
     callForActualChildBinders(mainScreenCls) { childBinder ->
         Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityResume()")
-        childBinder.onFocus(childBinder.counter)
+        childBinder.onFocus()
     }
 }
 
@@ -82,22 +82,22 @@ fun ScreensAdapter<*, *>.onActivityPause(mainScreenCls: Class<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.onActivityPause()")
 
     val binder = mainBindersMap[mainScreenCls]
-    binder!!.onLostFocus(binder.counter)
+    binder!!.onLostFocus()
 
     callForActualChildBinders(mainScreenCls) { childBinder ->
         Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityPause()")
-        childBinder.onLostFocus(binder.counter)
+        childBinder.onLostFocus()
     }
 }
 
 fun ScreensAdapter<*, *>.onActivityStopAfterTransition(activity: BaseActivity, mainScreenCls: Class<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.onActivityStopAfterTransition()")
     val binder = mainBindersMap[mainScreenCls]
-    binder!!.onHide(binder.counter)
+    binder!!.onHide()
 
     callForActualChildBinders(mainScreenCls) { childBinder ->
         Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityStopAfterTransition()")
-        childBinder.onHide(binder.counter)
+        childBinder.onHide()
     }
 
     val isSameActivity = getCurrentActivity()?.equals(activity) == true
