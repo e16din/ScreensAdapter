@@ -37,4 +37,8 @@ abstract class FragmentScreenBinder<SCREEN : Any>(adapter: ScreensAdapter<*, *>)
     open fun onSelectedInPager() {
         // override it
     }
+
+    open fun onDeselectedInPager() {
+        // override it
+    }
 }

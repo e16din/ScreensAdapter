@@ -49,7 +49,7 @@ abstract class BaseActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        screensAdapter.onActivityResume(settings.screenCls)
+        screensAdapter.onActivityResume(this, settings.screenCls)
     }
 
     override fun onPause() {

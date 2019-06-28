@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.e16din.screensadapter.*
+import kotlin.reflect.KClass
 
 
 class BaseFragment : Fragment() {
@@ -16,7 +17,7 @@ class BaseFragment : Fragment() {
         const val KEY_LAYOUT_ID = "KEY_LAYOUT_ID"
         const val KEY_HAS_OPTIONS_MENU = "KEY_HAS_OPTIONS_MENU"
 
-        fun create(screenCls: Class<*>,
+        fun create(screenCls: KClass<*>,
                    layoutId: Int,
                    hasOptionsMenu: Boolean = false,
                    fragmentId: Long = -1): BaseFragment {
@@ -24,7 +25,7 @@ class BaseFragment : Fragment() {
             val bundle = Bundle()
 
             bundle.putLong(KEY_FRAGMENT_ID, fragmentId)
-            bundle.putSerializable(KEY_SCREEN_CLS, screenCls)
+            bundle.putSerializable(KEY_SCREEN_CLS, screenCls.java)
             bundle.putInt(KEY_LAYOUT_ID, layoutId)
             bundle.putBoolean(KEY_HAS_OPTIONS_MENU, hasOptionsMenu)
             fragment.arguments = bundle
@@ -35,13 +36,13 @@ class BaseFragment : Fragment() {
     private val screensAdapter: ScreensAdapter<*, *>?
         get() = (activity?.application as ScreensAdapterApplication?)?.screensAdapter
 
-    lateinit var screenCls: Class<*>
+    lateinit var screenCls: KClass<*>
 
     var fragmentId: Long = -1
 
     override fun onCreateView(inflater: LayoutInflater, vContainer: ViewGroup?, savedInstanceState: Bundle?): View? {
         fragmentId = arguments!!.getLong(KEY_FRAGMENT_ID)
-        screenCls = arguments!!.getSerializable(KEY_SCREEN_CLS) as Class<*>
+        screenCls = (arguments!!.getSerializable(KEY_SCREEN_CLS) as Class<*>).kotlin
 
         val hasOptionsMenu = arguments!!.getBoolean(KEY_HAS_OPTIONS_MENU)
         setHasOptionsMenu(hasOptionsMenu)
@@ -71,8 +72,12 @@ class BaseFragment : Fragment() {
     }
 
     override fun onStop() {
-        screensAdapter?.onFragmentStop(screenCls, fragmentId)
+        screensAdapter?.onFragmentStop(this, screenCls, fragmentId)
         super.onStop()
+    }
+
+    fun onFragmentDeselected() {
+        screensAdapter?.onFragmentDeselected(screenCls, fragmentId)
     }
 
     fun onFragmentSelected() {

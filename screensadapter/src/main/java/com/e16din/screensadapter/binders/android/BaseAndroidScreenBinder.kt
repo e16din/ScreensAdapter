@@ -16,6 +16,7 @@ import com.e16din.screensadapter.binders.BaseCommonScreenBinder
 import com.e16din.screensmodel.BaseScreen
 import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
+import kotlin.reflect.KClass
 
 // Note! Hide supportScreens only through supportScreens screensAdapter.hideCurrentScreen()
 abstract class BaseAndroidScreenBinder<SCREEN : Any>(screensAdapter: ScreensAdapter<*, *>) :
@@ -23,6 +24,11 @@ abstract class BaseAndroidScreenBinder<SCREEN : Any>(screensAdapter: ScreensAdap
         CoroutineScope,
         BaseScreen.SystemAgent,
         BaseScreen.UserAgent {
+
+    companion object {
+        fun generateRequestCode(cls: KClass<*>, number: Int) =
+                cls.java.name.count { it == '.' } * 10 + number
+    }
 
     override val coroutineContext: CoroutineContext
         get() = SupervisorJob() + Dispatchers.Main

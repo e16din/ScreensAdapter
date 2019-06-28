@@ -8,13 +8,14 @@ import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.binders.IScreenBinder
 import com.e16din.screensadapter.binders.android.BaseAndroidScreenBinder
 import java.lang.ref.WeakReference
+import kotlin.reflect.KClass
 
 
 private const val TAG = "SA.ActivityHandler"
 
 private var isScreenShown = false
 
-fun ScreensAdapter<*, *>.onActivityCreateBeforeSuperCalled(activity: BaseActivity, mainScreenCls: Class<*>) {
+fun ScreensAdapter<*, *>.onActivityCreateBeforeSuperCalled(activity: BaseActivity, mainScreenCls: KClass<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.onActivityCreateBeforeSuperCalled()")
 
     currentActivityRef = WeakReference(activity)
@@ -27,7 +28,7 @@ fun ScreensAdapter<*, *>.onActivityCreateBeforeSuperCalled(activity: BaseActivit
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityCreated(activity: BaseActivity, mainScreenCls: Class<*>) {
+fun ScreensAdapter<*, *>.onActivityCreated(activity: BaseActivity, mainScreenCls: KClass<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.onActivityCreated()")
 
     currentActivityRef = WeakReference(activity)
@@ -40,7 +41,7 @@ fun ScreensAdapter<*, *>.onActivityCreated(activity: BaseActivity, mainScreenCls
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityStart(activity: BaseActivity, mainScreenCls: Class<*>) {
+fun ScreensAdapter<*, *>.onActivityStart(activity: BaseActivity, mainScreenCls: KClass<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.onActivityStart()")
     isScreenShown = true
     currentActivityRef = WeakReference(activity)
@@ -56,8 +57,9 @@ fun ScreensAdapter<*, *>.onActivityStart(activity: BaseActivity, mainScreenCls: 
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityResume(mainScreenCls: Class<*>) {
+fun ScreensAdapter<*, *>.onActivityResume(activity: BaseActivity, mainScreenCls: KClass<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.onActivityResume()")
+    currentActivityRef = WeakReference(activity)
     val binder = mainBindersMap[mainScreenCls]
     binder!!.onFocus()
 
@@ -67,7 +69,7 @@ fun ScreensAdapter<*, *>.onActivityResume(mainScreenCls: Class<*>) {
     }
 }
 
-fun ScreensAdapter<*, *>.beforeNextActivityStart(mainScreenCls: Class<*>) {
+fun ScreensAdapter<*, *>.beforeNextActivityStart(mainScreenCls: KClass<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.beforeNextActivityStart()")
     val binder = mainBindersMap[mainScreenCls]
     binder!!.onNextScreen()
@@ -78,7 +80,7 @@ fun ScreensAdapter<*, *>.beforeNextActivityStart(mainScreenCls: Class<*>) {
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityPause(mainScreenCls: Class<*>) {
+fun ScreensAdapter<*, *>.onActivityPause(mainScreenCls: KClass<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.onActivityPause()")
 
     val binder = mainBindersMap[mainScreenCls]
@@ -90,7 +92,7 @@ fun ScreensAdapter<*, *>.onActivityPause(mainScreenCls: Class<*>) {
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityStopAfterTransition(activity: BaseActivity, mainScreenCls: Class<*>) {
+fun ScreensAdapter<*, *>.onActivityStopAfterTransition(activity: BaseActivity, mainScreenCls: KClass<*>) {
     Log.d(TAG, "${mainScreenCls.simpleName}.onActivityStopAfterTransition()")
     val binder = mainBindersMap[mainScreenCls]
     binder!!.onHide()
@@ -110,7 +112,7 @@ fun ScreensAdapter<*, *>.onActivityStopAfterTransition(activity: BaseActivity, m
     }
 }
 
-fun ScreensAdapter<*, *>.onActivityResult(activity: BaseActivity, requestCode: Int, resultCode: Int, data: Intent?, mainScreenCls: Class<*>) {
+fun ScreensAdapter<*, *>.onActivityResult(activity: BaseActivity, requestCode: Int, resultCode: Int, data: Intent?, mainScreenCls: KClass<*>) {
     Log.w(TAG, "${mainScreenCls.simpleName}.onActivityResult(requestCode = $requestCode, resultCode = $resultCode)")
 
     isScreenShown = true
@@ -123,9 +125,14 @@ fun ScreensAdapter<*, *>.onActivityResult(activity: BaseActivity, requestCode: I
         Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityResult()")
         (childBinder as BaseAndroidScreenBinder<*>).onActivityResult(requestCode, resultCode, data)
     }
+
+    // NOTE: Workaround for this issue https://stackoverflow.com/a/16449850/6445611
+    fragmentBindersMap.forEach { (fragmentId, pair) ->
+        onFragmentActivityResult(requestCode, resultCode, data, pair.first, fragmentId)
+    }
 }
 
-fun ScreensAdapter<*, *>.onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray, mainScreenCls: Class<*>) {
+fun ScreensAdapter<*, *>.onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray, mainScreenCls: KClass<*>) {
     Log.w(TAG, "${mainScreenCls.simpleName}.onRequestPermissionsResult(requestCode = $requestCode, grantResults = $grantResults)")
 
     val binder = mainBindersMap[mainScreenCls]
@@ -161,7 +168,7 @@ fun ScreensAdapter<*, *>.onPrepareOptionsMenu(menu: Menu?): Boolean {
     return onPrepareOptionsMenuListener?.invoke(menu) ?: true
 }
 
-private fun ScreensAdapter<*, *>.callForActualChildBinders(mainScreenCls: Class<*>, call: (IScreenBinder) -> Unit) {
+private fun ScreensAdapter<*, *>.callForActualChildBinders(mainScreenCls: KClass<*>, call: (IScreenBinder) -> Unit) {
     childBindersMap[mainScreenCls]!!.forEach { (childScreenCls, childBinder) ->
         call.invoke(childBinder)
     }

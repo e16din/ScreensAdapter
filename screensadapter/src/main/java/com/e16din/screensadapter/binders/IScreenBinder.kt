@@ -17,6 +17,8 @@ interface IScreenBinder {
 
     fun onNextScreen() {}
 
+    fun onPrevScreen() {}
+
     fun onLostFocus() {}
 
     fun onHide() {}

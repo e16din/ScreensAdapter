@@ -17,6 +17,20 @@ open class RichViewPager @kotlin.jvm.JvmOverloads constructor(context: Context, 
             adapter?.let {
                 val fragment = (adapter as AdapterInterface).getFragment(position)
                 fragment?.onFragmentSelected()
+
+                try {
+                    val fragmentPrev = (adapter as AdapterInterface).getFragment(position - 1)
+                    fragmentPrev?.onFragmentDeselected()
+                } catch (e: IndexOutOfBoundsException) {
+                    e.printStackTrace()
+                }
+
+                try {
+                    val fragmentNext = (adapter as AdapterInterface).getFragment(position + 1)
+                    fragmentNext?.onFragmentDeselected()
+                } catch (e: IndexOutOfBoundsException) {
+                    e.printStackTrace()
+                }
             }
         }
     }

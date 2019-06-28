@@ -5,7 +5,9 @@ import com.e16din.screensadapter.annotation.model.App
 import com.e16din.screensadapter.annotation.model.Screen
 import com.e16din.screensadapter.annotation.model.Server
 import com.e16din.screensadapter.processor.ScreensAdapterProcessor.Companion.KAPT_KOTLIN_GENERATED_OPTION_NAME
+import com.google.auto.service.AutoService
 import com.squareup.kotlinpoet.*
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import java.io.File
 import javax.annotation.processing.*
 import javax.lang.model.SourceVersion
@@ -13,10 +15,11 @@ import javax.lang.model.element.Element
 import javax.lang.model.element.TypeElement
 import javax.lang.model.type.MirroredTypeException
 import javax.tools.Diagnostic
+import kotlin.reflect.KClass
 
 
-//@AutoService(Processor::class)
 @SupportedSourceVersion(SourceVersion.RELEASE_8)
+@AutoService(Processor::class)
 @SupportedAnnotationTypes("*")
 @SupportedOptions(KAPT_KOTLIN_GENERATED_OPTION_NAME)
 class ScreensAdapterProcessor : AbstractProcessor() {
@@ -30,10 +33,11 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         private const val PADDING_2 = "    "
         private const val PADDING_3 = "          "
 
-        private val CLS_ANDROID_APPLICATION =
-                ClassName("android.app", "Application")
-        private val CLS_BASE_ANDROID_SCREEN_BINDER =
-                ClassName("com.e16din.screensadapter.binders", "IScreenBinder")
+        private val CLS_NULLABLE_ANY = Any::class.asTypeName().copy(true)
+        private val CLS_KCLASS_WITH_ANY = KClass::class.asClassName().parameterizedBy(STAR)
+
+        private val CLS_ANDROID_APPLICATION = ClassName("android.app", "Application")
+        private val CLS_BASE_ANDROID_SCREEN_BINDER = ClassName("com.e16din.screensadapter.binders", "IScreenBinder")
     }
 
     private lateinit var filer: Filer
@@ -41,8 +45,8 @@ class ScreensAdapterProcessor : AbstractProcessor() {
 
     private var generated = false
 
-    private var appClassName: String? = null
-    private var serverClassName: String? = null
+    private var appClassName: ClassName? = null
+    private var serverClassName: ClassName? = null
 
     private var screens = arrayListOf<String>()
     // NOTE: Binder -> Screen
@@ -102,8 +106,9 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         roundEnv.getElementsAnnotatedWith(Server::class.java)
                 .firstOrNull()
                 ?.run {
-                    serverClassName = this.getFullName()
-                    "serverClassName: $serverClassName".print()
+                    val fullName = this.getFullName()
+                    serverClassName = ClassName(fullName.substringBeforeLast("."), fullName.substringAfterLast("."))
+                    "serverClassName: $fullName".print()
                 }
     }
 
@@ -111,8 +116,9 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         roundEnv.getElementsAnnotatedWith(App::class.java)
                 .firstOrNull()
                 ?.run {
-                    appClassName = this.getFullName()
-                    "appClassName: $appClassName".print()
+                    val fullName = this.getFullName()
+                    appClassName = ClassName(fullName.substringBeforeLast("."), fullName.substringAfterLast("."))
+                    "appClassName: $fullName".print()
                 }
     }
 
@@ -220,18 +226,18 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         screens.forEach { screenName ->
             val binderName = binderByScreenMap[screenName]
 
-            bindersObjectsCode += "$PADDING_2$screenName::class.java -> " +
+            bindersObjectsCode += "$PADDING_2$screenName::class -> " +
                     "$PADDING_3$binderName(this)" +
                     "\n$PADDING_2\n"
         }
 
         val funcSpec = FunSpec.builder("makeBinder")
                 .addModifiers(KModifier.OVERRIDE)
-                .addParameter(screenClsParamName, ClassName.bestGuess("Class<*>"))
+                .addParameter(screenClsParamName, CLS_KCLASS_WITH_ANY)
                 .addStatement(
                         "${PADDING_1}return when ($screenClsParamName) {\n" +
                                 bindersObjectsCode +
-                                "${PADDING_2}else -> throw createNotFoundException($screenClsParamName.simpleName)\n" +
+                                "${PADDING_2}else -> throw createNotFoundException($screenClsParamName.simpleName!!)\n" +
                                 "$PADDING_1}")
                 .returns(CLS_BASE_ANDROID_SCREEN_BINDER)
                 .build()
@@ -261,20 +267,20 @@ class ScreensAdapterProcessor : AbstractProcessor() {
             else
                 "$parentParamName as $parentType"
 
-            screensObjectsCode += "$PADDING_2$screenName::class.java -> \n" +
+            screensObjectsCode += "$PADDING_2$screenName::class -> \n" +
                     "restoreScreen(\"$screenName\") ?: $PADDING_3$screenName($data, $parent)" +
                     "$PADDING_2\n"
         }
 
         val funcSpec = FunSpec.builder("makeScreen")
                 .addModifiers(KModifier.OVERRIDE)
-                .addParameter(screenClsParamName, ClassName.bestGuess("Class<*>"))
-                .addParameter(dataParamName, ClassName.bestGuess("Any?"))
-                .addParameter(parentParamName, ClassName.bestGuess("Any?"))
+                .addParameter(screenClsParamName, CLS_KCLASS_WITH_ANY)
+                .addParameter(dataParamName, CLS_NULLABLE_ANY)
+                .addParameter(parentParamName, CLS_NULLABLE_ANY)
                 .addStatement(
                         "${PADDING_1}return when ($screenClsParamName) {\n" +
                                 screensObjectsCode +
-                                "${PADDING_2}else -> throw createNotFoundException($screenClsParamName.simpleName)\n" +
+                                "${PADDING_2}else -> throw createNotFoundException($screenClsParamName.simpleName!!)\n" +
                                 "$PADDING_1}")
                 .returns(ClassName.bestGuess("Any"))
                 .build()
@@ -293,8 +299,13 @@ class ScreensAdapterProcessor : AbstractProcessor() {
     }
 
     private fun (TypeSpec.Builder).addConstructor(): TypeSpec.Builder {
-        val superClassName = ClassName(SCREENS_ADAPTER_PACKAGE,
-                "ScreensAdapter<$appClassName, $serverClassName>")
+
+        val superClassName = ClassName(SCREENS_ADAPTER_PACKAGE, "ScreensAdapter")
+                .parameterizedBy(appClassName!!, serverClassName!!)
+        //todo: <$appClassName, $serverClassName>
+//        val superClassWithParamsName = ParameterSpec.builder(superClassName)
+//                .addTypeVariables(arrayListOf(TypeVariableName(appClassName!!), TypeVariableName(serverClassName!!)))
+//                .build()
 
         val androidAppParamName = "androidApp"
         val appParamName = "app"
@@ -304,8 +315,8 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         return this.superclass(superClassName).addModifiers(KModifier.PUBLIC)
                 .primaryConstructor(FunSpec.constructorBuilder()
                         .addParameter(androidAppParamName, CLS_ANDROID_APPLICATION)
-                        .addParameter(appParamName, ClassName.bestGuess(appClassName!!))
-                        .addParameter(serverParamName, ClassName.bestGuess(serverClassName!!))
+                        .addParameter(appParamName, appClassName!!)
+                        .addParameter(serverParamName, serverClassName!!)
                         .addParameter(delayForSplashMsParamName, Long::class)
                         .build())
                 .addSuperclassConstructorParameter(androidAppParamName)
@@ -333,33 +344,49 @@ private fun String.substringBetween(start: String, end: String): String? {
 }
 
 
+//package com.e16din.screensadapter
+//
+//import android.app.Application
+//import com.e16din.screensadapter.binders.IScreenBinder
+//import com.e16din.screensadapter.sample.app.SampleApp
+//import com.e16din.screensadapter.sample.server.SampleServer
+//import kotlin.Any
+//import kotlin.Long
+//import kotlin.reflect.KClass
+//
 //class GeneratedScreensAdapter(
 //        androidApp: Application,
-//        app: PurchasesAppAgent,
-//        server: PurchasesServerAgent,
-//        delayForSplashMs: Long,
-//        splashTheme: Int
-//) : ScreensAdapter<com.e16din.purchases.app.PurchasesAppAgent, com.e16din.purchases.server.PurchasesServerAgent>(androidApp, app, server, delayForSplashMs, splashTheme) {
-//    override fun makeScreen(mainScreenCls: Class<*>, data:Any?): Collection<Any> {
-//        return when (mainScreenCls) {
-//            com.e16din.purchases.screens.main.MainScreen::class.java -> arrayListOf(
-//                    "MainScreen".getData<MainScreen>() ?: com.e16din.purchases.screens.main.MainScreen(data)
-// )
-//            com.e16din.purchases.screens.order.OrderScreen::class.java -> arrayListOf(
-//                    com.e16din.purchases.screens.order.OrderScreen()    )
-//            else -> throw createNotFoundException(mainScreenCls.simpleName)
+//        app: SampleApp,
+//        server: SampleServer,
+//        delayForSplashMs: Long
+//) : ScreensAdapter<com.e16din.screensadapter.sample.app.SampleApp,
+//        com.e16din.screensadapter.sample.server.SampleServer>(androidApp, app, server,
+//        delayForSplashMs) {
+//    override fun makeScreen(
+//            screenCls: KClass<*>,
+//            data: Any?,
+//            parent: Any?
+//    ): Any {
+//        return when (screenCls) {
+//            com.e16din.screensadapter.sample.screens.auth.AuthScreen::class ->
+//                restoreScreen("com.e16din.screensadapter.sample.screens.auth.AuthScreen") ?:
+//                com.e16din.screensadapter.sample.screens.auth.AuthScreen(data, parent)
+//            com.e16din.screensadapter.sample.screens.main.MainScreen::class ->
+//                restoreScreen("com.e16din.screensadapter.sample.screens.main.MainScreen") ?:
+//                com.e16din.screensadapter.sample.screens.main.MainScreen(data, parent)
+//            else -> throw createNotFoundException(screenCls.simpleName!!)
 //        }
 //    }
 //
-//    override fun makeBinder(screenCls: Class<*>): Collection<BaseScreenBinder> {
+//    override fun makeBinder(screenCls: KClass<*>): IScreenBinder {
 //        return when (screenCls) {
-//            com.e16din.purchases.screens.main.MainScreen::class.java -> arrayListOf(
-//                    com.e16din.purchases.screens.main.MainBinder(this)
-//            )
-//            com.e16din.purchases.screens.order.OrderScreen::class.java -> arrayListOf(
-//                    com.e16din.purchases.screens.order.OrderBinder(this)
-//            )
-//            else -> throw createNotFoundException(screenCls.simpleName)
+//            com.e16din.screensadapter.sample.screens.auth.AuthScreen::class ->
+//                com.e16din.screensadapter.sample.screens.auth.AuthBinder(this)
+//
+//            com.e16din.screensadapter.sample.screens.main.MainScreen::class ->
+//                com.e16din.screensadapter.sample.screens.main.MainBinder(this)
+//
+//            else -> throw createNotFoundException(screenCls.simpleName!!)
 //        }
 //    }
 //}
