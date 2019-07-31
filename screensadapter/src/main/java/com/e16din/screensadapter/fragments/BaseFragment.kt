@@ -20,11 +20,11 @@ class BaseFragment : Fragment() {
         fun create(screenCls: KClass<*>,
                    layoutId: Int,
                    hasOptionsMenu: Boolean = false,
-                   fragmentId: Long = -1): BaseFragment {
+                   fragmentScreenId: Int = -1): BaseFragment {
             val fragment = BaseFragment()
             val bundle = Bundle()
 
-            bundle.putLong(KEY_FRAGMENT_ID, fragmentId)
+            bundle.putInt(KEY_FRAGMENT_ID, fragmentScreenId)
             bundle.putSerializable(KEY_SCREEN_CLS, screenCls.java)
             bundle.putInt(KEY_LAYOUT_ID, layoutId)
             bundle.putBoolean(KEY_HAS_OPTIONS_MENU, hasOptionsMenu)
@@ -38,10 +38,12 @@ class BaseFragment : Fragment() {
 
     lateinit var screenCls: KClass<*>
 
-    var fragmentId: Long = -1
+    var fragmentId: Int = -1
+
+    private var isAlreadyStopped: Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, vContainer: ViewGroup?, savedInstanceState: Bundle?): View? {
-        fragmentId = arguments!!.getLong(KEY_FRAGMENT_ID)
+        fragmentId = arguments!!.getInt(KEY_FRAGMENT_ID)
         screenCls = (arguments!!.getSerializable(KEY_SCREEN_CLS) as Class<*>).kotlin
 
         val hasOptionsMenu = arguments!!.getBoolean(KEY_HAS_OPTIONS_MENU)
@@ -68,11 +70,23 @@ class BaseFragment : Fragment() {
 
     override fun onStart() {
         super.onStart()
+        isAlreadyStopped = false
         screensAdapter?.onFragmentStart(screenCls, fragmentId)
     }
 
+    override fun onDestroyView() {
+        if (!isAlreadyStopped) {
+            isAlreadyStopped = true
+            screensAdapter?.onFragmentStop(this, screenCls, fragmentId)
+        }
+        super.onDestroyView()
+    }
+
     override fun onStop() {
-        screensAdapter?.onFragmentStop(this, screenCls, fragmentId)
+        if (!isAlreadyStopped) {
+            isAlreadyStopped = true
+            screensAdapter?.onFragmentStop(this, screenCls, fragmentId)
+        }
         super.onStop()
     }
 
@@ -82,19 +96,5 @@ class BaseFragment : Fragment() {
 
     fun onFragmentSelected() {
         screensAdapter?.onFragmentSelected(screenCls, fragmentId)
-    }
-
-    override fun onDetach() {
-        super.onDetach()
-        try {
-            val childFragmentManager = Fragment::class.java
-                    .getDeclaredField("mChildFragmentManager")
-            childFragmentManager.isAccessible = true
-            childFragmentManager.set(this, null)
-        } catch (e: NoSuchFieldException) {
-            e.printStackTrace()
-        } catch (e: IllegalAccessException) {
-            e.printStackTrace()
-        }
     }
 }

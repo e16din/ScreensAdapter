@@ -12,24 +12,21 @@ open class RichViewPager @kotlin.jvm.JvmOverloads constructor(context: Context, 
         fun getFragment(position: Int): BaseFragment?
     }
 
-    private val onPageChangeListener = object : SimpleOnPageChangeListener() {
+    protected val onPageChangeListener = object : SimpleOnPageChangeListener() {
         override fun onPageSelected(position: Int) {
             adapter?.let {
-                val fragment = (adapter as AdapterInterface).getFragment(position)
+                val adapterInterface = adapter as AdapterInterface
+                val fragment = adapterInterface.getFragment(position)
                 fragment?.onFragmentSelected()
 
-                try {
-                    val fragmentPrev = (adapter as AdapterInterface).getFragment(position - 1)
+                if (position - 1 >= 0) {
+                    val fragmentPrev = adapterInterface.getFragment(position - 1)
                     fragmentPrev?.onFragmentDeselected()
-                } catch (e: IndexOutOfBoundsException) {
-                    e.printStackTrace()
                 }
 
-                try {
-                    val fragmentNext = (adapter as AdapterInterface).getFragment(position + 1)
+                if (position + 1 < adapter?.count ?: 0) {
+                    val fragmentNext = adapterInterface.getFragment(position + 1)
                     fragmentNext?.onFragmentDeselected()
-                } catch (e: IndexOutOfBoundsException) {
-                    e.printStackTrace()
                 }
             }
         }
@@ -42,8 +39,12 @@ open class RichViewPager @kotlin.jvm.JvmOverloads constructor(context: Context, 
                 super.setAdapter(null)
             }
             is AdapterInterface -> {
-                super.setAdapter(adapter)
                 addOnPageChangeListener(onPageChangeListener)
+                super.setAdapter(adapter)
+
+                post {
+                    onPageChangeListener.onPageSelected(currentItem)
+                }
             }
             else -> throw IllegalStateException("Please, use the AdapterInterface")
         }

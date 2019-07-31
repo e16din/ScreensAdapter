@@ -20,5 +20,11 @@ open class ScreenSettings(
         val activityCls: KClass<*> = Any::class,
         val isFullscreen: Boolean = false,
         val isDialog: Boolean = false,
-        val requestCode: Int? = null) {
+        val isTransluent: Boolean = false,
+        val requestCode: Int? = null,
+        var screenId: Int = NO_ID) {
+
+    companion object {
+        const val NO_ID = -1
+    }
 }

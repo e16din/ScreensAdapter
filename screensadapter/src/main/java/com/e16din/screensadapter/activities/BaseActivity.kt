@@ -9,13 +9,13 @@ import androidx.appcompat.app.AppCompatActivity
 import com.e16din.screensadapter.*
 import com.e16din.screensadapter.settings.ScreenSettings
 
+
 abstract class BaseActivity : AppCompatActivity() {
 
     private lateinit var settings: ScreenSettings
 
     private val screensAdapter: ScreensAdapter<*, *>
         get() = (application as ScreensAdapterApplication).screensAdapter
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         settings = screensAdapter.getCurrentSettings()
@@ -24,7 +24,7 @@ abstract class BaseActivity : AppCompatActivity() {
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_FULLSCREEN
         }
 
-        if (!settings.isDialog) {
+        if (!settings.isDialog && !settings.isTransluent) {
             setTheme(settings.themeId)
         }
 

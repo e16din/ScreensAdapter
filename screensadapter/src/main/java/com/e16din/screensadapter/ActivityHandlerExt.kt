@@ -7,6 +7,7 @@ import android.view.MenuItem
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.binders.IScreenBinder
 import com.e16din.screensadapter.binders.android.BaseAndroidScreenBinder
+import com.e16din.screensadapter.helpers.foreach
 import java.lang.ref.WeakReference
 import kotlin.reflect.KClass
 
@@ -110,6 +111,8 @@ fun ScreensAdapter<*, *>.onActivityStopAfterTransition(activity: BaseActivity, m
     if (!isScreenShown) {
         getApp().onHideAllScreens(screenSettingsStack.size)
     }
+
+    screensMap.clear()
 }
 
 fun ScreensAdapter<*, *>.onActivityResult(activity: BaseActivity, requestCode: Int, resultCode: Int, data: Intent?, mainScreenCls: KClass<*>) {
@@ -127,8 +130,8 @@ fun ScreensAdapter<*, *>.onActivityResult(activity: BaseActivity, requestCode: I
     }
 
     // NOTE: Workaround for this issue https://stackoverflow.com/a/16449850/6445611
-    fragmentBindersMap.forEach { (fragmentId, pair) ->
-        onFragmentActivityResult(requestCode, resultCode, data, pair.first, fragmentId)
+    fragmentBindersMap.foreach { (fragmentScreenId, pair) ->
+        onFragmentActivityResult(requestCode, resultCode, data, pair.first, fragmentScreenId)
     }
 }
 
@@ -168,8 +171,8 @@ fun ScreensAdapter<*, *>.onPrepareOptionsMenu(menu: Menu?): Boolean {
     return onPrepareOptionsMenuListener?.invoke(menu) ?: true
 }
 
-private fun ScreensAdapter<*, *>.callForActualChildBinders(mainScreenCls: KClass<*>, call: (IScreenBinder) -> Unit) {
-    childBindersMap[mainScreenCls]!!.forEach { (childScreenCls, childBinder) ->
+internal fun ScreensAdapter<*, *>.callForActualChildBinders(mainScreenCls: KClass<*>, call: (IScreenBinder) -> Unit) {
+    childBindersMap[mainScreenCls]!!.foreach { (childScreenCls, childBinder) ->
         call.invoke(childBinder)
     }
 }

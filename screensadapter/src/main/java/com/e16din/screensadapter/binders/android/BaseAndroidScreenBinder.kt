@@ -13,25 +13,32 @@ import androidx.fragment.app.Fragment
 import com.e16din.screensadapter.ScreensAdapter
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.binders.BaseCommonScreenBinder
+import com.e16din.screensadapter.helpers.LocalCoroutineScope
 import com.e16din.screensmodel.BaseScreen
-import kotlinx.coroutines.*
-import kotlin.coroutines.CoroutineContext
-import kotlin.reflect.KClass
+import kotlinx.coroutines.async
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
 
 // Note! Hide supportScreens only through supportScreens screensAdapter.hideCurrentScreen()
 abstract class BaseAndroidScreenBinder<SCREEN : Any>(screensAdapter: ScreensAdapter<*, *>) :
         BaseCommonScreenBinder<SCREEN>(screensAdapter),
-        CoroutineScope,
+        LocalCoroutineScope,
         BaseScreen.SystemAgent,
         BaseScreen.UserAgent {
 
     companion object {
-        fun generateRequestCode(cls: KClass<*>, number: Int) =
-                cls.java.name.count { it == '.' } * 10 + number
-    }
+        private const val REQ_CODE_START = 10
+        private var lastRequestCode = REQ_CODE_START
 
-    override val coroutineContext: CoroutineContext
-        get() = SupervisorJob() + Dispatchers.Main
+        fun generateRequestCode(): Int {
+            lastRequestCode += 1
+            return lastRequestCode
+        }
+
+        fun resetRequestCode() {
+            lastRequestCode = REQ_CODE_START
+        }
+    }
 
     fun Activity.getContentView() =
             this.findViewById<View>(android.R.id.content)!!
@@ -56,9 +63,9 @@ abstract class BaseAndroidScreenBinder<SCREEN : Any>(screensAdapter: ScreensAdap
 
     override fun getColor(id: Int) = ContextCompat.getColor(activity, id)
 
-    override fun hideScreen() {
-        Log.d("ScreensAdapter", "hideScreen()")
-        screensAdapter.hideCurrentScreen()
+    override fun hideScreen(result: Any?) {
+        Log.d("ScreensAdapter", "hideScreen() | result: $result")
+        screensAdapter.hideCurrentScreen(result)
     }
 
     override fun onHide() {
@@ -107,8 +114,8 @@ abstract class BaseAndroidScreenBinder<SCREEN : Any>(screensAdapter: ScreensAdap
         setOnBackPressedListener(null)
     }
 
-    protected fun findFragmentById(fragmentId: Int): Fragment? {
-        return activity.supportFragmentManager.findFragmentById(fragmentId)
+    protected fun findFragmentById(fragmentScreenId: Int): Fragment? {
+        return activity.supportFragmentManager.findFragmentById(fragmentScreenId)
     }
 
     protected fun findFragmentByTag(tag: String): Fragment? {

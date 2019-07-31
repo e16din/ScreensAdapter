@@ -8,7 +8,7 @@ import com.e16din.screensadapter.fragments.BaseFragment
 abstract class FragmentScreenBinder<SCREEN : Any>(adapter: ScreensAdapter<*, *>) :
         ScreenBinder<SCREEN>(adapter) {
 
-    var fragmentId: Long = -2
+    var fragmentId = -1
 
     override val view: View
         get() = fragment.view!!

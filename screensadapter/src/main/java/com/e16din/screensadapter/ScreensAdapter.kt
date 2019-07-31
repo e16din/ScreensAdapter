@@ -12,17 +12,20 @@ import androidx.fragment.app.FragmentManager
 import com.e16din.datamanager.DataManager
 import com.e16din.datamanager.getData
 import com.e16din.datamanager.putData
-import com.e16din.datamanager.remove
 import com.e16din.screensadapter.activities.BaseActivity
 import com.e16din.screensadapter.activities.DefaultActivity
 import com.e16din.screensadapter.activities.DialogActivity
+import com.e16din.screensadapter.activities.TranslucentActivity
 import com.e16din.screensadapter.binders.IScreenBinder
 import com.e16din.screensadapter.binders.android.FragmentScreenBinder
 import com.e16din.screensadapter.fragments.BaseFragment
+import com.e16din.screensadapter.helpers.removeNow
+import com.e16din.screensadapter.helpers.replaceNow
 import com.e16din.screensadapter.settings.ScreenSettings
 import com.e16din.screensmodel.BaseApp
 import java.lang.ref.WeakReference
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 
 //todo: Сделать @BindCase(caseCls, screenCls) биндить автоматически на onBind
@@ -53,22 +56,30 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
     private lateinit var firstScreenSettings: ScreenSettings
     private var firstData: Any? = null
 
-    private var nextFragmentId = Long.MAX_VALUE
+    private var nextScreenId = Int.MAX_VALUE
 
     internal var currentActivityRef = WeakReference<BaseActivity>(null)
 
+    private var lastResultRef = WeakReference<Any?>(null)
+
+    // NOTE: Screen -> Screen Object
+    val screensMap = hashMapOf<Int, Pair<KClass<*>, Any?>>()
+
     // NOTE: Screen -> Binder
+    //todo: Брать биндеры не по классу а по id-шнику
+    //todo: и можно будет удалить parentFragmentScreenId или нельзя, выписать структуру на бумагу и улучшить/сократить по возможности
     internal val mainBindersMap = hashMapOf<KClass<*>, IScreenBinder>()
     // NOTE: MainScreen -> ChildScreen -> Binder
-    internal val childBindersMap = hashMapOf<KClass<*>, HashMap<KClass<*>, IScreenBinder>>()
-    internal val finishedScreensIds = arrayListOf<Long>() // todo:
+    internal val childBindersMap = hashMapOf<KClass<*>, ConcurrentHashMap<KClass<*>, IScreenBinder>>()
+    internal val finishedScreensIds = arrayListOf<Int>() // todo:
 
     // NOTE: fragmentId -> (FragmentScreen, Binder)
-    internal val fragmentBindersMap = hashMapOf<Long, Pair<KClass<*>, IScreenBinder>>()
-    // NOTE: fragmentId -> ChildScreen -> Binder
-    internal val fragmentChildBindersMap = hashMapOf<Long, HashMap<KClass<*>, IScreenBinder>>()
-    internal val finishedFragmentsIds = arrayListOf<Long>()
+    internal val fragmentBindersMap = hashMapOf<Int, Pair<KClass<*>, IScreenBinder>>()
+    // NOTE: parentFragmentScreenId -> childScreenId -> ChildScreen -> Binder
+    internal val fragmentChildBindersMap = hashMapOf<Int, ConcurrentHashMap<KClass<*>, IScreenBinder>>()
+    internal val finishedFragmentsIds = arrayListOf<Int>()
 
+    @Volatile
     var screenSettingsStack = Stack<ScreenSettings>()
 
     var onBackPressedListener: (() -> Unit)? = null
@@ -82,10 +93,11 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
             return settings.activityCls
         }
 
-        return if (settings.isDialog)
-            DialogActivity::class
-        else
-            DefaultActivity::class
+        return when {
+            settings.isDialog -> DialogActivity::class
+            settings.isTransluent -> TranslucentActivity::class
+            else -> DefaultActivity::class
+        }
     }
 
     private fun startActivity(settings: ScreenSettings, prevSettings: ScreenSettings?, activity: Activity? = null) {
@@ -104,14 +116,17 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
             settings.requestCode?.run {
                 Log.w(TAG, "settings.requestCode: ${settings.screenCls.simpleName} | requestCode = ${settings.requestCode}")
                 startActivityForResult(intent, this)
-            } ?: startActivity(intent)
+
+            } ?: {
+                startActivity(intent)
+            }.invoke()
 
             if (settings.finishPreviousScreen) {
-                ActivityCompat.finishAfterTransition(this)
+                this.finish()
             }
 
             if (prevSettings?.finishOnNextScreen == true) {
-                ActivityCompat.finishAfterTransition(this)
+                this.finish()
             }
         }
     }
@@ -124,12 +139,24 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         }, delayForSplashMs)
     }
 
-    fun backToPreviousScreenOrClose() {
+    fun getLastResult() = lastResultRef.get()
+
+    fun backToPreviousScreenOrClose(result: Any? = null) {
+        lastResultRef = WeakReference(result)
+
         val currentScreenCls = getCurrentScreenCls()!!
         Log.i(TAG, "hideCurrentScreen: ${currentScreenCls.simpleName}")
 
-        popScreenSettings()
+        val binder = mainBindersMap[currentScreenCls]
+        Log.d(TAG, "     ${binder!!.javaClass.simpleName}.onPrevScreen()")
+        binder.onPrevScreen()
 
+        callForActualChildBinders(currentScreenCls) { childBinder ->
+            Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onPrevScreen()")
+            childBinder.onPrevScreen()
+        }
+
+        popScreenSettings()
         ActivityCompat.finishAfterTransition(getCurrentActivity()!!)
     }
 
@@ -156,13 +183,13 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
     protected fun createNotFoundException(name: String) =
             IllegalStateException("Invalid Screen!!! The \"$name\" screen is not found in the generator.")
 
-    protected fun restoreScreen(screenName: String): Any? {
-        return screenName.getData()
-    }
-
     abstract fun makeBinder(screenCls: KClass<*>): IScreenBinder
 
-    abstract fun makeScreen(mainScreenCls: KClass<*>, data: Any?, parent: Any?): Any
+    abstract fun getScreen(screenId: Int,
+                           screenCls: KClass<*>?,
+                           data: Any? = null,
+                           parent: Any? = null,
+                           recreate: Boolean): Any
 
     // NOTE: There are available to use from binders:
 
@@ -177,23 +204,27 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         firstData = data
     }
 
+    //NOTE: add child screens in onBind() or after onFocus() with isScreenFocused == true
+    // как это можно улучшить?
     fun addChildBinder(childScreenCls: KClass<*>,
                        data: Any? = null,
                        parent: Any? = null,
-                       fragmentId: Long = -3,
-                       afterOnBind: Boolean = false) {
-        val screen = makeScreen(childScreenCls, data, parent)
+                       parentFragmentId: Int = -3,
+                       isScreenFocused: Boolean = false,
+                       recreateScreen: Boolean = false) {
 
-        Log.i(TAG, "addChildBinder(afterOnBind = $afterOnBind): ${childScreenCls.simpleName}")
+        val screenId = generateScreenId()
+
+        val screen = getScreen(screenId, childScreenCls, data, parent, recreateScreen)
+        screensMap[screenId] = Pair(childScreenCls, screen)
+
+        Log.i(TAG, "addChildBinder(isScreenFocused = $isScreenFocused): ${childScreenCls.simpleName}")
         val binder = makeBinder(childScreenCls)
 
-        val hasFragmentId = fragmentId > 0
+        val hasFragmentId = parentFragmentId != -3
         if (hasFragmentId) {
-            (binder as FragmentScreenBinder<*>).fragmentId = fragmentId
-        }
-
-        if (hasFragmentId) {
-            fragmentChildBindersMap[fragmentId]!![childScreenCls] = binder
+            (binder as FragmentScreenBinder<*>).fragmentId = parentFragmentId
+            fragmentChildBindersMap[parentFragmentId]!![childScreenCls] = binder
 
         } else {
             val mainScreenCls = getCurrentScreenCls()!!
@@ -201,12 +232,11 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         }
 
         binder.initScreen(screen)
-
         binder.onPrepare()
-        binder.onBind()
 
-        if (afterOnBind) {
+        if (isScreenFocused) {
             binder.counter += 1
+            binder.onBind()
             binder.onShow()
             binder.onFocus()
         }
@@ -214,10 +244,10 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         saveScreensAdapterState()
     }
 
-    fun removeChildBinder(childScreenCls: KClass<*>, fragmentId: Long = -1) {
+    fun removeChildBinder(childScreenCls: KClass<*>, fragmentScreenId: Int = -1) {
         childBindersMap.remove(childScreenCls)
-        if (fragmentId >= 0) {
-            fragmentChildBindersMap[fragmentId]!!.remove(childScreenCls)
+        if (fragmentScreenId >= 0) {
+            fragmentChildBindersMap[fragmentScreenId]!!.remove(childScreenCls)
         }
 
         saveScreensAdapterState()
@@ -226,44 +256,46 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
     fun createFragment(settings: ScreenSettings,
                        data: Any? = null,
                        parent: Any? = null,
-                       fragmentId: Long = nextFragmentId): BaseFragment {
+                       recreateScreen: Boolean = false): BaseFragment {
 
-        val finalFragmentId: Long
+        settings.screenId = generateScreenId(settings.screenId)
+        fragmentChildBindersMap[settings.screenId] = ConcurrentHashMap()
 
-        if (fragmentId == nextFragmentId) {
-            nextFragmentId -= 1
-            finalFragmentId = nextFragmentId
+        val screen = getScreen(settings.screenId, settings.screenCls, data, parent, recreateScreen)
+        screensMap[settings.screenId] = Pair(settings.screenCls, screen)
 
-        } else {
-            finalFragmentId = fragmentId
-        }
-
-        fragmentChildBindersMap[finalFragmentId] = hashMapOf()
-
-        val screen = makeScreen(settings.screenCls, data, parent)
-
-        Log.i(TAG, "fragmentId: $finalFragmentId")
-        Log.i(TAG, "showFragmentScreen: ${screen.javaClass.simpleName}")
+        Log.i(TAG, "fragmentId: ${settings.screenId}")
         val binder = makeBinder(screen.javaClass.kotlin)
 
-        (binder as FragmentScreenBinder<*>).fragmentId = finalFragmentId
+        (binder as FragmentScreenBinder<*>).fragmentId = settings.screenId
 
-        fragmentBindersMap[finalFragmentId] = Pair(screen.javaClass.kotlin, binder)
+        fragmentBindersMap[settings.screenId] = Pair(screen.javaClass.kotlin, binder)
 
         binder.initScreen(screen)
 
         return BaseFragment.create(settings.screenCls,
                 settings.layoutId!!,
-                fragmentId = finalFragmentId)
+                fragmentScreenId = settings.screenId)
+    }
+
+    private fun generateScreenId(screenId: Int = ScreenSettings.NO_ID): Int {
+        val hasScreenId = screenId != ScreenSettings.NO_ID
+        if (hasScreenId) {
+            return screenId
+
+        } else {
+            nextScreenId -= 1
+            return nextScreenId
+        }
     }
 
     fun showFragment(containerId: Int,
                      settings: ScreenSettings,
                      data: Any? = null,
                      parent: Any? = null,
-                     fragmentManager: FragmentManager = getCurrentActivity()?.supportFragmentManager!!) {
-
-        val fragment = createFragment(settings, data, parent)
+                     fragmentManager: FragmentManager = getCurrentActivity()?.supportFragmentManager!!,
+                     recreateScreen: Boolean = false) {
+        val fragment = createFragment(settings, data, parent, recreateScreen)
         val tag = "$containerId"
 
         val previousFragment = (fragmentManager.findFragmentByTag(tag) as BaseFragment?)
@@ -271,6 +303,7 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
             finishedFragmentsIds.add(it.fragmentId)
         }
 
+        Log.i(TAG, "showFragmentScreen: ${settings.screenCls.simpleName}")
         fragmentManager.replaceNow(containerId, fragment, tag)
 
         saveScreensAdapterState()
@@ -297,9 +330,9 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
     fun showNextScreen(settings: ScreenSettings,
                        activity: Activity? = null,
                        data: Any? = null,
-                       parent: Any? = null) {
+                       parent: Any? = null,
+                       recreateScreen: Boolean = false) {
 
-        removeScreenFromSharedPreferences(settings)
         onBackPressedListener = null
 
         if (settings.finishAllPreviousScreens) {
@@ -309,9 +342,11 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         }
 
         val nextScreenCls = settings.screenCls
-        childBindersMap[nextScreenCls] = hashMapOf()
+        childBindersMap[nextScreenCls] = ConcurrentHashMap()
 
-        val screen = makeScreen(nextScreenCls, data, parent)
+        settings.screenId = generateScreenId(settings.screenId)
+        val screen = getScreen(settings.screenId, nextScreenCls, data, parent, recreateScreen)
+        screensMap[settings.screenId] = Pair(nextScreenCls, screen)
 
         Log.i(TAG, "showNextScreen: ${screen.javaClass.simpleName}")
         val binder = makeBinder(screen.javaClass.kotlin)
@@ -337,14 +372,10 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         saveScreensAdapterState()
     }
 
-    private fun removeScreenFromSharedPreferences(settings: ScreenSettings) {
-        settings.screenCls.qualifiedName!!.remove()
-    }
-
-    fun resetToFirstScreen(data: Any? = firstData) {
+    fun resetToFirstScreen(data: Any? = firstData, recreateScreen: Boolean = false) {
         val firstScreenSettings = screenSettingsStack.last()
         firstScreenSettings.finishAllPreviousScreens = true
-        showNextScreen(firstScreenSettings, data = data, parent = null)
+        showNextScreen(firstScreenSettings, data = data, parent = null, recreateScreen = recreateScreen)
     }
 
     fun start() {
@@ -362,5 +393,5 @@ abstract class ScreensAdapter<out APP : BaseApp, out SERVER>(
         return screenSettingsStack.peek()
     }
 
-    fun hideCurrentScreen() = backToPreviousScreenOrClose()
+    fun hideCurrentScreen(result: Any?) = backToPreviousScreenOrClose(result)
 }

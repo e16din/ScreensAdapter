@@ -21,6 +21,10 @@
             android:name="com.e16din.screensadapter.activities.DialogActivity"
             android:theme="@style/AppTheme.Dialog"/>
 
+        <activity
+            android:name="com.e16din.screensadapter.activities.TranslucentActivity"
+            android:theme="@style/Theme.AppCompat.Translucent"/>
+
     </application>
 
 </manifest>

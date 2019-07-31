@@ -8,7 +8,7 @@ open class BaseScreen {
     enum class LogType { Debug, Warning, Info, Error }
 
     interface UserAgent {
-        fun hideScreen()
+        fun hideScreen(result: Any? = null)
     }
 
     interface SystemAgent {

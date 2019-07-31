@@ -1,4 +1,4 @@
-package com.e16din.screensadapter
+package com.e16din.screensadapter.helpers
 
 import android.app.Activity
 import android.content.Context
@@ -51,4 +51,12 @@ val Int.pxToDp: Int
     get() = (this / Resources.getSystem().displayMetrics.density).toInt()
 val Int.dpToPx: Int
     get() = (this * Resources.getSystem().displayMetrics.density).toInt()
+
+inline fun <K, V> Map<out K, V>.foreach(action: (Map.Entry<K, V>) -> Unit) {
+    with(this.iterator()) {
+        forEach {
+            action.invoke(it)
+        }
+    }
+}
 
