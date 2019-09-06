@@ -1,11 +1,8 @@
 <resources>
-
-    <style name="StarterTheme" parent="android:Theme.Translucent.NoTitleBar.Fullscreen">
+    <style name="DefaultTheme" parent="Base.Theme.AppCompat">
         <item name="android:windowBackground">@drawable/sa_bg_splash</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowActionBar">false</item>
-        <item name="windowActionBar">false</item>
-        <item name="android:windowAnimationStyle">@null</item>
     </style>
 
     <style name="AppTheme.Dialog" parent="Base.Theme.AppCompat.Light.Dialog">
@@ -21,5 +18,4 @@
         <item name="android:colorBackgroundCacheHint">@null</item>
         <item name="android:windowAnimationStyle">@android:style/Animation</item>
     </style>
-
 </resources>

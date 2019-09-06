@@ -1,15 +1,16 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
 
 ext {
     bintrayRepo = 'maven'
-    bintrayName = 'screensadapter'
+    bintrayName = 'screensadaptermvp'
 
     publishedGroupId = 'com.github.e16din'
     libraryName = libraryName
     artifact = bintrayName
 
-    libraryDescription = 'ScreensAdapter'
+    libraryDescription = 'ScreensAdapter.Mvp'
 
     siteUrl = siteUrl
     gitUrl = gitUrl
@@ -28,38 +29,41 @@ ext {
 android {
     compileSdkVersion 28
 
-
     defaultConfig {
         minSdkVersion 21
         targetSdkVersion 28
         versionCode 1
         versionName "1.0"
+
         multiDexEnabled true
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 
+    lintOptions {
+        abortOnError false
+    }
+
+    compileOptions {
+        targetCompatibility 1.8
+        sourceCompatibility 1.8
+    }
 }
 
 dependencies {
     implementation "androidx.multidex:multidex:2.0.1"
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-
     implementation "androidx.appcompat:appcompat:$supportVersion"
-
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
-    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion"
-    implementation "com.github.e16din:datamanager:0.6.2"
-    implementation 'com.google.code.gson:gson:2.8.5'
+
+    api project(path: ':screensadapter')
 }
 
 apply from: '../installv1.gradle'

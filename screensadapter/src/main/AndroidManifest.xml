@@ -4,8 +4,7 @@
     <application>
 
         <activity
-            android:name="com.e16din.screensadapter.activities.StarterActivity"
-            android:theme="@style/StarterTheme">
+            android:name="com.e16din.screensadapter.activities.FirstActivity">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
