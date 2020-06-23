@@ -22,7 +22,7 @@ class MvpScreenSettings(
         override var requestCode: Int? = null,
         override var screenId: Int = -1,
         override var data: Any? = null,
-        var recreateScreen: Boolean = false,
+        var reuseScreen: Boolean = false,
         var parent: Any? = null
 
 ) : ScreenSettings(activityCls = activityCls,

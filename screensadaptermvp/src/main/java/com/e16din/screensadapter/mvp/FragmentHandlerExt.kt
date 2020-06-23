@@ -95,9 +95,10 @@ fun MvpScreensAdapter<*, *>.onFragmentStop(fragment: BaseFragment, fragmentScree
     Log.d(TAG, "     ${fragmentScreenCls.simpleName}$logPostfix")
     binder.onHide()
 
-    callForActualChildBinders(fragmentScreenId) { childBinder ->
+    fragmentChildBindersMap[fragmentScreenId]!!.foreach { (childScreenCls, childBinder) ->
         Log.d(TAG, "     ${childBinder.javaClass.simpleName}$logPostfix")
         childBinder.onHide()
+        removeChildBinder(childScreenCls, fragmentScreenId)
     }
 
     clearFinishedBinders(fragment, fragmentScreenId, fragmentScreenCls)

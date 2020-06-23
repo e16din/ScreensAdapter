@@ -22,6 +22,7 @@ open class ScreenSettings(
         open var screenId: Int = NO_ID,
 
         open var data: Any? = null
+
 ) {
 
     companion object {

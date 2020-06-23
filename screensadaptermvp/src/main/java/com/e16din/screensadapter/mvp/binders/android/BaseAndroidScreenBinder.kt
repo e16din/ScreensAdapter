@@ -59,10 +59,17 @@ abstract class BaseAndroidScreenBinder<SCREEN : Any>(screensAdapter: MvpScreensA
 
     override fun getColor(id: Int) = ContextCompat.getColor(activity, id)
 
-    override fun hideScreen(result: Any?, withAnimation: Boolean, resultCode: Int?) {
-        Log.d("ScreensAdapter", "hideScreen() | result: $result")
-        screensAdapter.hideCurrentScreen(withAnimation, resultCode)
+    override fun hideScreen(withAnimation: Boolean) {
+        Log.d("ScreensAdapter", "hideScreen() | withAnimation: $withAnimation")
+        screensAdapter.hideCurrentScreen(withAnimation)
     }
+
+    override fun setActivityResult(resultCode: Int, result: Any?) {
+        screensAdapter.resultHolder = result
+        activity.setResult(resultCode)
+    }
+
+    fun getActivityResult() = screensAdapter.resultHolder
 
     override fun onHide() {
         coroutineContext.cancelChildren()
@@ -168,7 +175,7 @@ abstract class BaseAndroidScreenBinder<SCREEN : Any>(screensAdapter: MvpScreensA
     override fun performOnBackPressed() {
         Log.d(MvpScreensAdapter.TAG, "onBackPressed()")
 
-        screensAdapter.backToPreviousScreenOrClose(true, Activity.RESULT_CANCELED)
+        screensAdapter.backToPreviousScreenOrClose(true)
     }
 }
 

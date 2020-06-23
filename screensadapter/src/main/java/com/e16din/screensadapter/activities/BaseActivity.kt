@@ -27,8 +27,8 @@ abstract class BaseActivity : RichCompatActivity() {
 
     private lateinit var settings: ScreenSettings
 
-    private fun initListeners() {
-        onCreateBeforeSuperCallEvent.addListener {
+    fun initListeners() {
+        events.onCreateBeforeSuperCallEvent.addListener {
             settings = ScreensAdapter.get.items.last()
 
             if (settings.isTranslucent) {
@@ -46,7 +46,7 @@ abstract class BaseActivity : RichCompatActivity() {
             requestedOrientation = settings.orientation
         }
 
-        onCreateEvent.addListener {
+        events.onCreateEvent.addListener {
             settings.layoutId?.run {
                 setContentView(this)
             }

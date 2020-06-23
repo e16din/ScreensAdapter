@@ -33,6 +33,8 @@ class BaseFragment : Fragment() {
         }
     }
 
+    private var vContent: View? = null
+
     private val screensAdapter: MvpScreensAdapter<*, *>?
         get() = (activity?.application as MvpScreensAdapterApplication?)?.screensAdapter
 
@@ -50,12 +52,15 @@ class BaseFragment : Fragment() {
         setHasOptionsMenu(hasOptionsMenu)
 
         val layoutId = arguments!!.getInt(KEY_LAYOUT_ID)
-        return inflater.inflate(layoutId, vContainer, false)
+        vContent = inflater.inflate(layoutId, vContainer, false)
+
+        screensAdapter?.onFragmentCreate(screenCls, fragmentId)
+
+        return vContent
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        screensAdapter?.onFragmentCreate(screenCls, fragmentId)
+    override fun getView(): View? {
+        return vContent
     }
 
     override fun onResume() {

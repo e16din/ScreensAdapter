@@ -87,9 +87,10 @@ fun MvpScreensAdapter<*, *>.onActivityStopAfterTransition(activity: BaseActivity
     val binder = mainBindersMap[mainScreenCls]
     binder!!.onHide()
 
-    callForActualChildBinders(mainScreenCls) { childBinder ->
+    childBindersMap[mainScreenCls]!!.foreach { (childScreenCls, childBinder) ->
         Log.d(TAG, "     ${childBinder.javaClass.simpleName}.onActivityStopAfterTransition()")
         childBinder.onHide()
+        removeChildBinder(childScreenCls)
     }
 
     val isSameActivity = getCurrentActivity()?.equals(activity) == true

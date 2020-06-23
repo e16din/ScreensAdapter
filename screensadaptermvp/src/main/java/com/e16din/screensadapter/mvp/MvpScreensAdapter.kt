@@ -62,7 +62,14 @@ abstract class MvpScreensAdapter<out APP : BaseApp, out SERVER>(
 
     // NOTE: Kowabunga!
 
-    override fun backToPreviousScreenOrClose(withAnimation: Boolean, resultCode: Int?) {
+    fun <T : IScreenBinder> getBinderBy(screenCls: KClass<*>): T? {
+        return (mainBindersMap[screenCls]
+                ?: fragmentBindersMap.values.firstOrNull { it.first == screenCls }?.second
+                ?: childBindersMap[getCurrentScreenCls()]!![screenCls]
+                ?: fragmentChildBindersMap.values.firstOrNull { it[screenCls] != null }?.get(screenCls)) as? T
+    }
+
+    override fun backToPreviousScreenOrClose(withAnimation: Boolean) {
         val currentScreenCls = getCurrentScreenCls()!!
         Log.i(TAG, "hideCurrentScreen: ${currentScreenCls.simpleName}")
 
@@ -75,7 +82,7 @@ abstract class MvpScreensAdapter<out APP : BaseApp, out SERVER>(
             childBinder.onPrevScreen()
         }
 
-        super.backToPreviousScreenOrClose(withAnimation, resultCode)
+        super.backToPreviousScreenOrClose(withAnimation)
     }
 
     private fun getCurrentScreenCls() = (items.lastOrNull() as MvpScreenSettings?)?.presenterCls
@@ -91,7 +98,7 @@ abstract class MvpScreensAdapter<out APP : BaseApp, out SERVER>(
                            screenCls: KClass<*>?,
                            data: Any? = null,
                            parent: Any? = null,
-                           recreate: Boolean): Any
+                           reuse: Boolean): Any
 
 
     fun getAndroidApp() = androidAppRef.get()
@@ -106,11 +113,11 @@ abstract class MvpScreensAdapter<out APP : BaseApp, out SERVER>(
                        parent: Any? = null,
                        parentFragmentId: Int = -3,
                        isScreenFocused: Boolean = false,
-                       recreateScreen: Boolean = false) {
+                       reuseScreen: Boolean = false) {
 
         val screenId = generateScreenId()
 
-        val screen = getScreen(screenId, childScreenCls, data, parent, recreateScreen)
+        val screen = getScreen(screenId, childScreenCls, data, parent, reuseScreen)
         screensMap[screenId] = Pair(childScreenCls, screen)
 
         Log.i(TAG, "addChildBinder(isScreenFocused = $isScreenFocused): ${childScreenCls.simpleName}")
@@ -128,10 +135,11 @@ abstract class MvpScreensAdapter<out APP : BaseApp, out SERVER>(
 
         binder.initScreen(screen)
         binder.onPrepare()
-        binder.onBind()
 
         if (isScreenFocused) {
             binder.counter += 1
+
+            binder.onBind()
             binder.onShow()
             binder.onFocus()
         }
@@ -154,7 +162,7 @@ abstract class MvpScreensAdapter<out APP : BaseApp, out SERVER>(
                 settings.presenterCls,
                 settings.data,
                 settings.parent,
-                settings.recreateScreen)
+                settings.reuseScreen)
         screensMap[settings.screenId] = Pair(settings.presenterCls, screen)
 
         Log.i(TAG, "fragmentId: ${settings.screenId}")
@@ -193,6 +201,7 @@ abstract class MvpScreensAdapter<out APP : BaseApp, out SERVER>(
             addedFragmentsSettings[containerId]?.clear()
 
             val previousFragment = (fragmentManager.findFragmentByTag(tag) as BaseFragment?)
+
             previousFragment?.let {
                 finishedFragmentsIds.add(it.fragmentId)
             }
@@ -260,7 +269,7 @@ abstract class MvpScreensAdapter<out APP : BaseApp, out SERVER>(
                 nextScreenCls,
                 settings.data,
                 settings.parent,
-                settings.recreateScreen)
+                settings.reuseScreen)
         screensMap[settings.screenId] = Pair(nextScreenCls, screen)
 
         Log.i(TAG, "showNextScreen: ${screen.javaClass.simpleName}")

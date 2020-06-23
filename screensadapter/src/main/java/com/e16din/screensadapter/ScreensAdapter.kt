@@ -24,6 +24,8 @@ open class ScreensAdapter(androidApp: Application) {
         const val ITEMS = "ITEMS"
     }
 
+    var resultHolder: Any? = null
+
     var restoreScreensOnStart = true
 
     var nextScreenId = Int.MAX_VALUE
@@ -58,9 +60,10 @@ open class ScreensAdapter(androidApp: Application) {
     }
 
     private fun startActivity(settings: ScreenSettings) {
-        val starter = getCurrentActivity()
+        resultHolder = null
+        val starterActivity = getCurrentActivity()
 
-        starter?.run {
+        starterActivity?.run {
             beforeNextActivityStart(settings)
 
             val intent = Intent(this, getActivityCls(settings).java)
@@ -97,7 +100,7 @@ open class ScreensAdapter(androidApp: Application) {
         // NOTE: for override
     }
 
-    open fun backToPreviousScreenOrClose(withAnimation: Boolean, resultCode: Int?) {
+    open fun backToPreviousScreenOrClose(withAnimation: Boolean) {
         val activitySimpleName = items.lastOrNull()?.activityCls?.simpleName
         Log.i(TAG, "hideCurrentScreen: $activitySimpleName")
 
@@ -106,9 +109,6 @@ open class ScreensAdapter(androidApp: Application) {
         }
 
         val currentActivity = getCurrentActivity()!!
-        resultCode?.let {
-            currentActivity.setResult(resultCode)
-        }
         if (withAnimation) {
             ActivityCompat.finishAfterTransition(currentActivity)
 
@@ -180,8 +180,8 @@ open class ScreensAdapter(androidApp: Application) {
         Log.i(TAG, "start(): see FirstActivity")
     }
 
-    fun hideCurrentScreen(withAnimation: Boolean, resultCode: Int?) =
-            backToPreviousScreenOrClose(withAnimation, resultCode)
+    fun hideCurrentScreen(withAnimation: Boolean) =
+            backToPreviousScreenOrClose(withAnimation)
 
     fun saveState() {
 //        val builder = GsonBuilder()

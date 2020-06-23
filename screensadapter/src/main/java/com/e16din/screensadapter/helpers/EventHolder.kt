@@ -2,49 +2,43 @@ package com.e16din.screensadapter.helpers
 
 import android.util.Log
 
-class EventHolder<D, R>(
-    var it: ((data: D?) -> R)? = null,
-    var resultData: D? = null,
-    var name: String? = null
+
+typealias EventListener<DATA> = ((data: DATA?) -> Unit)
+
+class EventHolder<DATA, RESULT>(
+        var listeners: ArrayList<EventListener<DATA>> = ArrayList(),
+        var data: DATA? = null,
+        var result: RESULT? = null,
+        var name: String? = null
 ) {
-    fun invoke(newData: D? = null): R? {
-        Log.w("Event", "$name")
+    fun invoke(newData: DATA? = null): RESULT? {
+        Log.w("EH.debug", "$name")
 
         if (newData != null) {
-            resultData = newData
+            data = newData
         }
-        return it?.invoke(resultData)
-    }
 
-    fun getCommonDataProvider(): () -> D? = { resultData }
-}
+        listeners.forEachIndexed { index, function ->
+            Log.w("EH.debug", "$name: $index")
+            function.invoke(data)
+        }
 
-fun <D, R> EventHolder<D, R>.setListener(function: ((data: D?) -> R)?) {
-    this.it = function
-    this.resultData = null
-}
-
-fun <D, R> EventHolder<D, R>.clearAll() = setListener(null)
-
-fun <D, R> EventHolder<D, R>.addListener(function: (data: D?) -> R) {
-    val previousFunc = it
-    it = combineFunctions(function, previousFunc, false, getCommonDataProvider())
-}
-
-fun <D, R> combineFunctions(
-    newFunc: (data: D?) -> R,
-    currFunc: ((data: D?) -> R)?,
-    callNewBeforeCurrent: Boolean,
-    dataProvider: () -> D?
-): ((data: D?) -> R)? = {
-    val commonData = dataProvider.invoke()
-
-    if (callNewBeforeCurrent) {
-        val newFuncResult = newFunc.invoke(commonData)
-        currFunc?.invoke(commonData) ?: newFuncResult
-
-    } else {
-        currFunc?.invoke(commonData)
-        newFunc.invoke(commonData)
+        return result
     }
 }
+
+fun <DATA> EventHolder<DATA, *>.setListener(function: (data: DATA?) -> Unit) {
+    listeners.clear()
+    addListener(function)
+}
+
+fun EventHolder<*, *>.reset() {
+    data = null
+    result = null
+    listeners.clear()
+}
+
+fun <DATA> EventHolder<DATA, *>.addListener(function: (data: DATA?) -> Unit) {
+    listeners.add(function)
+}
+

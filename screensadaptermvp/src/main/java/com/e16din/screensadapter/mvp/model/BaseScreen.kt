@@ -8,7 +8,7 @@ open class BaseScreen {
     enum class LogType { Debug, Warning, Info, Error }
 
     interface UserAgent {
-        fun hideScreen(result: Any? = null, withAnimation: Boolean = true, resultCode: Int? = null)
+        fun hideScreen(withAnimation: Boolean = true)
     }
 
     interface SystemAgent {
@@ -32,5 +32,7 @@ open class BaseScreen {
 
         fun getString(id: Int, formatArgs: Array<Any> = emptyArray()): String
         fun getColor(id: Int): Int
+
+        fun setActivityResult(resultCode: Int, result: Any? = null)
     }
 }

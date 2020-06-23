@@ -295,7 +295,7 @@ class ScreensAdapterProcessor : AbstractProcessor() {
         val screenClsParamName = "screenCls"
         val dataParamName = "data"
         val parentParamName = "parent"
-        val recreateParamName = "recreate"
+        val reuseParamName = "reuse"
 
 
         val funcSpec = FunSpec.builder("getScreen")
@@ -304,9 +304,9 @@ class ScreensAdapterProcessor : AbstractProcessor() {
                 .addParameter(screenClsParamName, CLS_NULLABLE_KCLASS_WITH_ANY)
                 .addParameter(dataParamName, CLS_NULLABLE_ANY)
                 .addParameter(parentParamName, CLS_NULLABLE_ANY)
-                .addParameter(recreateParamName, Boolean::class)
+                .addParameter(reuseParamName, Boolean::class)
                 .addStatement(
-                        "${PADDING_1}if (recreate) {" +
+                        "${PADDING_1}if (reuse) {" +
                                 "${PADDING_2}screensMap[screenId]?.second?.let { screen ->\n" +
                                 "${PADDING_3}return screen\n" +
                                 "${PADDING_2}} ?: return createScreen($screenClsParamName, $dataParamName, $parentParamName)\n" +

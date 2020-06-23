@@ -13,8 +13,14 @@ open class BaseActivitySymbiont {
     }
 
     open fun initListeners(activity: BaseActivity) {
-        activity.onBackPressedEvent.setListener {
-            ScreensAdapter.get.onBackPressedListener?.invoke()
+        val onBackPressedEvent = activity.events.onBackPressedEvent
+        onBackPressedEvent.setListener {
+            onBackPressedEvent.result = false
+
+            ScreensAdapter.get.onBackPressedListener?.let {
+                onBackPressedEvent.result = true
+                it.invoke()
+            }
         }
     }
 }
