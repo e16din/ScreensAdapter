@@ -1,9 +1,24 @@
 # ScreensAdapter
-Adapter for application screens.
+An adapter for application screens that allows you to create screens programmatically and avoid using AndroidManifest.xml
 
 ## Init
 ```kotlin
-// todo: add an example
+class App : MultiDexApplication(),
+     MvpScreensAdapterApplication,
+     YourApp {
+
+    override val screensAdapter: MvpScreensAdapter<*, *> by lazy {
+        GeneratedScreensAdapter(this, this, RequestManager)
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+
+        val screenSettings = SplashBinder.createScreenSettings()
+        screensAdapter.items.add(screenSettings)
+        screensAdapter.start()
+    }
+}
 ```
 
 ## Using
@@ -27,7 +42,7 @@ class SplashBinder(adapter: MvpScreensAdapter<*, *>) : ScreenBinder<SplashScreen
     override fun onBind() {
         screen.userAgent = this
         screen.systemAgent = this
-        screen.app = screensAdapter.getApp() as MelangeApp
+        screen.app = screensAdapter.getApp() as YourApp
 
         screen.onBind()
     }
@@ -50,9 +65,6 @@ class SplashBinder(adapter: MvpScreensAdapter<*, *>) : ScreenBinder<SplashScreen
 class SplashScreen(var nothing: Any?, var parent: Any?) {
 
     interface UserAgent : BaseScreen.UserAgent {
-        fun showClockwiseAnimation()
-        fun hideAllAnimations()
-
         fun showFaqScreen()
         fun showScenarioScreen()
     }
@@ -63,34 +75,25 @@ class SplashScreen(var nothing: Any?, var parent: Any?) {
 
     lateinit var userAgent: UserAgent
     lateinit var systemAgent: SystemAgent
-    lateinit var app: MelangeApp
+    lateinit var app: YourApp
     lateinit var server: RequestManager
 
-    private var animationJob: Job? = null
 
     fun onBind() {
         systemAgent.initViews()
-        userAgent.showClockwiseAnimation()
     }
 
     fun onShow() {
-        animationJob = systemAgent.runOnBackgroundThread {
-            delay(1000) //NOTE: что бы показать анимацию
+        if (app.isFaqFinished()) {
+            userAgent.showScenarioScreen()
 
-            systemAgent.runOnUiThread {
-                if (app.isFaqFinished()) {
-                    userAgent.showScenarioScreen()
-
-                } else {
-                    userAgent.showFaqScreen()
-                }
-            }
+        } else {
+            userAgent.showFaqScreen()
         }
     }
 
     fun onHide() {
-        animationJob?.cancel()
-        userAgent.hideAllAnimations()
+        // do nothing
     }
 }
 ```
