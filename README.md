@@ -1,3 +1,5 @@
+# @Deprecated
+
 # ScreensAdapter
 An adapter for application screens that allows you to create screens programmatically and avoid using AndroidManifest.xml
 
